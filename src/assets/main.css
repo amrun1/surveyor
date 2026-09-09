@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-accent: var(--color-accent);
+  --color-danger: var(--color-danger);
+  --color-background: var(--color-background);
+}
+
+body {
+  background-color: var(--color-background);
+  color: #0f172a;
+}
