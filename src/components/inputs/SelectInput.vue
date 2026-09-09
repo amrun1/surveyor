@@ -1,0 +1,18 @@
+<template>
+    <div class="w-full flex flex-col gap-1">
+        <span class="text-slate-700 text-sm font-medium mb-1 block">{{ label }}<span v-if="required"
+                class="text-red-500 font-bold ml-0.5">*</span></span>
+        <select v-model="inputValue" :class="error ? 'border-red-500' : 'border-slate-300 focus:ring-primary'"
+            class="border rounded-xl p-2.5 w-full text-sm bg-white text-slate-900 focus:outline-none focus:ring-1 shadow-xs">
+            <option value="" disabled selected>{{ placeholder || 'Select an option' }}</option>
+            <option v-for="opt in options" :key="opt.value || opt" :value="opt.value || opt">{{ opt.label || opt }}
+            </option>
+        </select>
+        <span v-if="error" class="text-xs text-red-500 font-semibold mt-1 block">{{ error }}</span>
+    </div>
+</template>
+
+<script setup>
+defineProps({ label: String, placeholder: String, required: Boolean, error: String, options: Array })
+const inputValue = defineModel({ default: '' })
+</script>
