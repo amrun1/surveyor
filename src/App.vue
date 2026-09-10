@@ -1,11 +1,20 @@
 <script setup>
+import { ref, provide } from 'vue'
 import { RouterView } from 'vue-router'
 import { useUiStore } from '@/store/ui.js'
 import { APP_COLORS } from '@/constants/colors.js'
 import Header from './components/Header.vue'
 import Menu from './components/Menu.vue'
+import AppToast from '@/components/Toast.vue'
 
 const ui = useUiStore()
+const globalToastComponentRef = ref(null)
+
+provide('toast', {
+  success: (title, msg) => globalToastComponentRef.value?.show(title, msg, 'success'),
+  offline: (title, msg) => globalToastComponentRef.value?.show(title, msg, 'offline'),
+  error: (title, msg) => globalToastComponentRef.value?.show(title, msg, 'error')
+})
 </script>
 
 <template>
@@ -29,5 +38,7 @@ const ui = useUiStore()
         </div>
       </main>
     </div>
+
+    <AppToast ref="globalToastComponentRef" />
   </div>
 </template>

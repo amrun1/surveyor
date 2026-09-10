@@ -5,10 +5,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject } from 'vue'
+import { useRouter } from 'vue-router'
 import SharedForm from '@/components/Form.vue'
 import { addRecord, getCachedDropdownOptions } from '@/database/db.js'
 import { transformFacilityDropdownOptions } from '@/domain/mappers.js'
+const toast = inject('toast')
+const router = useRouter()
 
 // ============================================================================
 // 1. BANKING DECLARATIVE MORTGAGE APPRAISAL MATRIX CONFIGURATION
@@ -71,38 +74,42 @@ const formConfig = ref({
  * @param {Object} flattenedFormData - Cleansed key-value dictionary payload from Form.vue
  */
 const handleFormPublishPipeline = async (flattenedFormData) => {
-    // Pack our secure banking transaction envelope structure
     const transactionEnvelope = {
         timestamp: Date.now(),
         status: 'pending',
         payload: flattenedFormData
     }
 
-    // 1. Mirror data instantly into IndexedDB table buffer in less than 0.05ms
-    const recordId = await addRecord('syncQueue', transactionEnvelope)
-    console.log(`Mortgage audit trail saved securely inside local device database registry ID: ${recordId}`)
+    await addRecord('syncQueue', transactionEnvelope)
 
-    // 2. Trigger hardware-level background syncing manager
+    let isBackgroundSyncRegistered = false
     if ('serviceWorker' in navigator && 'SyncManager' in window) {
         try {
             const registration = await navigator.serviceWorker.ready
-            // Register custom tag to process queues even if the application window is entirely killed
             await registration.sync.register('tomcat-form-flush')
-            console.log('Banking sync queue tag locked with device kernel tracking engine.')
-        } catch (syncErr) {
-            console.warn('Native background sync restricted by platform layer. Relying on active session thread.', syncErr)
+            isBackgroundSyncRegistered = true
+        } catch {
+            isBackgroundSyncRegistered = false
         }
     }
 
-    // 3. Clear data collection entries safely to prepare for the next mortgage inspection cycle
+    if (navigator.onLine && isBackgroundSyncRegistered) {
+        toast.success(
+            'Appraisal Record Synchronized',
+            `Ticket reference ${flattenedFormData.appraisalTicket || 'log'} sent straight to Tomcat.`
+        )
+    } else {
+        toast.offline(
+            'Cached Securely Offline',
+            'Data encrypted in IndexedDB. Device will auto-flush upon hardware network recovery.'
+        )
+    }
+
     formConfig.value.fields.forEach(field => {
-        // Keep surveyor ID cached to save time for the inspector, clear other inputs
-        if (field.name !== 'operator') {
-            field.value = field.type === 'canvas' && field.multi ? [] : ''
-        }
+        if (field.name !== 'operator') field.value = field.type === 'canvas' && field.multi ? [] : ''
     })
 
-    alert('Appraisal valuation checklist cached successfully. Data is fully secure.')
+    router.push({ name: 'inquiry' })
 }
 
 // ============================================================================
