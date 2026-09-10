@@ -1,0 +1,12 @@
+{
+    "rewrites": [
+        {
+            "source": "/surveyor/(.*)",
+            "destination": "/$1"
+        },
+        {
+            "source": "/((?!api|assets|pwa-).*)",
+            "destination": "/index.html"
+        }
+    ]
+}
