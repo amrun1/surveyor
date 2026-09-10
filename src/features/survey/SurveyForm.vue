@@ -22,7 +22,7 @@ const formConfig = ref({
 
         // Section 2: Property Core Identifiers & Certificates
         { type: 'text', name: 'shmCertificateNumber', label: 'Sertifikat Hak Milik (SHM) Reference Code', placeholder: 'Enter official land book certificate number', required: true },
-        { type: 'select', name: 'facilityType', label: 'Collateral Property Classification', placeholder: 'Select architectural class...', required: true, options: [], value: '' },
+        { type: 'select', name: 'facilityType', label: 'Collateral Property Classification', placeholder: 'Select architectural class...', required: false, options: [], value: '' },
 
         // Section 3: High-Performance Auto-Compressing Photographic Documentation Node
         {
