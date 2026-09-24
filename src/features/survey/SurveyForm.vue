@@ -1,7 +1,7 @@
 <!-- src/features/survey/SurveyForm.vue -->
 <template>
   <div class="p-4 space-y-8 animate-fade-in">
-    <SharedForm :formConfig="formConfig" @onSubmit="handleFormPublishPipeline" />
+    <SharedForm :formConfig="formConfig" @onSubmit="handleFormPublishPipeline" @onDraftChange="handleDraftChange" />
   </div>
 </template>
 
@@ -9,7 +9,7 @@
 import { ref, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import SharedForm from '@/components/Form.vue'
-import { addRecord, getCachedDropdownOptions } from '@/database/db.js'
+import { addRecord, getCachedDropdownOptions, saveDraft, getDraft, deleteDraft } from '@/database/db.js'
 import { transformFacilityDropdownOptions } from '@/domain/mappers.js'
 
 const toast = inject('toast')
@@ -31,9 +31,6 @@ const formConfig = ref({
   
   fields: [
     // Tab 1: Data Umum — matches "Generate LPA Internal Appraisal" screenshot exactly.
-    // autoFilled: comes from the assigned order, not typed by the surveyor -> rendered
-    // in CollapsedInfoCard instead of the editable flow below.
-    // pinned: stays visible in the card's collapsed summary row.
     { type: 'text', name: 'noOrder', label: 'No. Order', value: '2025062500106', autoFilled: true, pinned: true },
     { type: 'text', name: 'nomerLPA', label: 'Nomer LPA', value: '', autoFilled: true },
     { type: 'text', name: 'cpDitemui', label: 'CP yang ditemui', value: 'DIRGA', autoFilled: true, pinned: true },
@@ -47,12 +44,10 @@ const formConfig = ref({
     { type: 'text', name: 'sla', label: 'SLA', value: '0', autoFilled: true },
     { type: 'text', name: 'tanggalOrder', label: 'Tanggal Order', value: '25-06-2025', autoFilled: true },
 
-    // Editable fields the surveyor actually fills in or confirms on-site.
     { type: 'select', name: 'jenisObjekFisik', label: 'Jenis Object Penilaian (Fisik)', placeholder: '-- Select --', required: true, options: ['Rumah Tinggal', 'Apartemen', 'Ruko/Rukan', 'Gudang'], value: '' },
     { type: 'select', name: 'lokasiCabang', label: 'Lokasi Cabang', placeholder: 'Pilih cabang...', options: ['Jakarta', 'Tangerang', 'Bekasi', 'Surabaya'], value: 'Jakarta' },
     { type: 'textarea', name: 'lokasiAgunanFisik', label: 'Lokasi Agunan (Fisik)', value: 'GIANTARA SERPONG CITY CLUSTER NERIN JALAN NERIN III NO 8 TYPE MAIRA STANDARD' },
 
-    // Only relevant for apartment/tower-type properties — hidden otherwise.
     { type: 'text', name: 'namaPerumahan', label: 'Nama Perumahan/Apartment', value: '', visibleIf: { field: 'jenisObjekFisik', value: 'Apartemen' } },
     { type: 'text', name: 'namaCluster', label: 'Nama Cluster/Tower', value: '', visibleIf: { field: 'jenisObjekFisik', value: 'Apartemen' } },
 
@@ -103,6 +98,10 @@ const formConfig = ref({
   ]
 })
 
+// Single draft slot for this form; a real multi-order flow would key this per
+// order/ticket (e.g. `survey-draft-${appraisalTicket}`) once orders are dynamic.
+const DRAFT_KEY = 'survey-draft-data-umum'
+
 const handleFormPublishPipeline = async (flattenedFormData) => {
   const transactionEnvelope = {
     timestamp: Date.now(),
@@ -111,6 +110,7 @@ const handleFormPublishPipeline = async (flattenedFormData) => {
   }
 
   await addRecord('syncQueue', transactionEnvelope)
+  await deleteDraft(DRAFT_KEY) // submitted successfully -> no draft left to restore
 
   let isBackgroundSyncRegistered = false
   if ('serviceWorker' in navigator && 'SyncManager' in window) {
@@ -138,11 +138,39 @@ const handleFormPublishPipeline = async (flattenedFormData) => {
   router.push({ name: 'inquiry' })
 }
 
+// Fired (debounced) by Form.vue on every field change, and immediately on the
+// "Save draft" tap. Persists straight to IndexedDB — this is the real autosave;
+// "Save draft" is now just a way to force an immediate flush + confirmation toast.
+const handleDraftChange = async (fieldsSnapshot) => {
+  try {
+    await saveDraft(DRAFT_KEY, fieldsSnapshot)
+  } catch (err) {
+    console.error('Draft autosave failed:', err)
+  }
+}
+
 onMounted(async () => {
   const cachedClassifications = await getCachedDropdownOptions('facilityTypesList')
   const classificationField = formConfig.value.fields.find(f => f.name === 'facilityType')
   if (classificationField && cachedClassifications) {
     classificationField.options = transformFacilityDropdownOptions(cachedClassifications)
+  }
+
+  // Restore any in-progress draft from a previous session (autosaved fields only —
+  // autoFilled/order-derived fields are never overwritten by a stale draft).
+  const draft = await getDraft(DRAFT_KEY)
+  if (draft?.fieldsSnapshot?.length) {
+    let restoredCount = 0
+    draft.fieldsSnapshot.forEach(({ name, value }) => {
+      const field = formConfig.value.fields.find(f => f.name === name)
+      if (field && !field.autoFilled && value) {
+        field.value = value
+        restoredCount++
+      }
+    })
+    if (restoredCount > 0) {
+      toast.success('Draft Restored', `${restoredCount} field(s) recovered from your last session.`)
+    }
   }
 })
 </script>

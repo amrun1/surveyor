@@ -73,14 +73,15 @@
           </div>
         </div>
 
-        <CollapsedInfoCard :fields="formConfig?.fields ?? []" />
+        <CollapsedInfoCard :fields="activeTabAutoFilledFields" />
 
         <div class="space-y-5 flex-1 bg-white">
           <div 
             v-for="(field, index) in formConfig?.fields" 
             :key="index" 
+            :id="`field-${field.name}`"
             v-show="!field.autoFilled && isFieldVisible(field) && isFieldInActiveTab(field)" 
-            class="flex flex-col form-field-row"
+            class="flex flex-col form-field-row scroll-mt-24"
           >
             <component 
               :is="componentMaps[field.type]" 
@@ -143,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, inject } from 'vue'
+import { ref, computed, watch, nextTick, inject } from 'vue'
 import TextInput from '@/components/inputs/TextInput.vue'
 import TextArea from '@/components/inputs/TextArea.vue'
 import MapDisplay from '@/components/inputs/MapDisplay.vue'
@@ -152,7 +153,7 @@ import CameraCapture from '@/components/inputs/CameraCapture.vue'
 import CanvasDraw from '@/components/inputs/canvasdraw/CanvasDraw.vue'
 import CollapsedInfoCard from '@/components/CollapsedInfoCard.vue'
 
-const emit = defineEmits(['onSubmit'])
+const emit = defineEmits(['onSubmit', 'onDraftChange'])
 const props = defineProps({ formConfig: { type: Object, default: () => ({ fields: [] }) } })
 const fieldErrors = ref({})
 const activeTabIdx = ref(0)
@@ -167,6 +168,10 @@ const componentMaps = {
   camera: CameraCapture 
 }
 
+const activeTabAutoFilledFields = computed(() =>
+  props.formConfig.fields.filter(f => f.autoFilled && isFieldInActiveTab(f))
+)
+
 const isFieldInActiveTab = (field) => {
   if (!props.formConfig.tabs || props.formConfig.tabs.length === 0) return true
   const currentTab = props.formConfig.tabs[activeTabIdx.value]
@@ -179,8 +184,6 @@ const isFieldVisible = (field) => {
   return target ? String(target.value).trim() === String(field.visibleIf.value).trim() : true
 }
 
-// A tab counts as complete once every visible required field inside it has a value.
-// Used to figure out how far ahead someone is allowed to jump.
 const isTabComplete = (idx) => {
   const tab = props.formConfig.tabs?.[idx]
   if (!tab) return true
@@ -192,9 +195,6 @@ const isTabComplete = (idx) => {
   })
 }
 
-// The furthest tab reachable right now: every completed tab, plus the first
-// incomplete one (so you can always continue where you left off). Anything
-// past that is locked until earlier required fields are filled in.
 const maxReachableTabIdx = computed(() => {
   const tabs = props.formConfig.tabs
   if (!tabs || tabs.length === 0) return 0
@@ -214,6 +214,31 @@ const handleTabClick = (idx) => {
   activeTabIdx.value = idx
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+// Scrolls to the first field currently marked invalid, so a validation failure on a
+// long tab (e.g. Data Umum's 20 fields) doesn't leave the person hunting for what's wrong.
+const scrollToFirstError = async () => {
+  await nextTick()
+  const firstErrorName = Object.keys(fieldErrors.value)[0]
+  if (!firstErrorName) return
+  document.getElementById(`field-${firstErrorName}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+// Real autosave: every field change is persisted (debounced), not just the explicit
+// "Save draft" tap. Form.vue stays storage-agnostic — it just emits a snapshot; the
+// parent (SurveyForm.vue) decides where/how to persist it (IndexedDB via db.js).
+let autosaveTimer = null
+const emitDraftChange = (immediate = false) => {
+  clearTimeout(autosaveTimer)
+  const fire = () => emit('onDraftChange', props.formConfig.fields.map(f => ({ name: f.name, value: f.value })))
+  if (immediate) fire()
+  else autosaveTimer = setTimeout(fire, 600)
+}
+
+watch(() => props.formConfig.fields.map(f => f.value), () => {
+  if (Object.keys(fieldErrors.value).length > 0) validateActiveTabFieldsOnly()
+  emitDraftChange()
+})
 
 const validateActiveTabFieldsOnly = () => {
   fieldErrors.value = {}
@@ -245,6 +270,7 @@ const handleNavigateForwardStep = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } else {
     toast.error('Required Information Missing', 'Please complete all required fields on this page.')
+    scrollToFirstError()
   }
 }
 
@@ -257,6 +283,7 @@ const handleNavigateBackwardsStep = () => {
 }
 
 const handleSaveDraftShortcut = () => {
+  emitDraftChange(true)
   toast.success('Draft Saved', 'Your assessment progress has been safely cached locally.')
 }
 
@@ -289,13 +316,10 @@ const validateWholeFormOnSubmit = () => {
   return isValid
 }
 
-watch(() => props.formConfig.fields.map(f => f.value), () => { 
-  if (Object.keys(fieldErrors.value).length > 0) validateActiveTabFieldsOnly() 
-}, { deep: true })
-
 const handleSubmit = () => {
   if (!validateWholeFormOnSubmit()) {
     toast.error('Submission Blocked', 'Incomplete compliance indicators found on earlier steps.')
+    scrollToFirstError()
     return
   }
   const payload = {}

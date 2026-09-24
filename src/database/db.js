@@ -2,7 +2,7 @@
 // 1. DATABASE METADATA & CRYPTO CONSTANTS
 // ============================================================================
 const DB_NAME = 'SurveyorOfflineDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 // Secret corporate security passphrase seed (In production, derive this dynamically from user login session)
 const SECRET_PASSPHRASE_SEED = 'Permata-Mortgage-Secure-Salt-2026';
@@ -10,10 +10,6 @@ const SECRET_PASSPHRASE_SEED = 'Permata-Mortgage-Secure-Salt-2026';
 // ============================================================================
 // 2. HARDWARE-ACCELERATED ENCRYPTION KEY DERIVATION
 // ============================================================================
-/**
- * Derives a type-safe cryptographic key from a static passphrase seed token using PBKDF2
- * @returns {Promise<CryptoKey>}
- */
 async function getCryptoKey() {
     const enc = new TextEncoder();
     const keyMaterial = await window.crypto.subtle.importKey(
@@ -52,6 +48,9 @@ export function openDB() {
             if (!db.objectStoreNames.contains('dropdownOptions')) {
                 db.createObjectStore('dropdownOptions', { keyPath: 'storeKey' });
             }
+            if (!db.objectStoreNames.contains('drafts')) {
+                db.createObjectStore('drafts', { keyPath: 'draftKey' });
+            }
         };
 
         request.onsuccess = (event) => resolve(event.target.result);
@@ -62,31 +61,24 @@ export function openDB() {
 // ============================================================================
 // 4. SECURE TRANSACTION UTILITIES (DATA AT REST ENCRYPTION)
 // ============================================================================
-/**
- * Encrypts mortgage appraisal payload data using AES-GCM before caching into IndexedDB.
- * @param {string} storeName - Target table name.
- * @param {Object} envelopeData - Object containing the payload and initial metadata states.
- */
 export async function addRecord(storeName, envelopeData) {
     const db = await openDB();
 
     try {
         const key = await getCryptoKey();
-        const iv = window.crypto.getRandomValues(new Uint8Array(12)); // Generate secure unique IV initialization vector
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
         const enc = new TextEncoder();
 
-        // Stringify and encrypt raw technical data dictionary values (text, maps, base64 drawings)
         const encryptedBuffer = await window.crypto.subtle.encrypt(
             { name: 'AES-GCM', iv: iv },
             key,
             enc.encode(JSON.stringify(envelopeData.payload))
         );
 
-        // Pack encrypted parameters safely into storage structures matching corporate security logs policies
         const securePackage = {
             timestamp: envelopeData.timestamp || Date.now(),
             status: envelopeData.status || 'pending',
-            iv: Array.from(iv), // Convert to standard array structure to allow serialization
+            iv: Array.from(iv),
             ciphertext: Array.from(new Uint8Array(encryptedBuffer))
         };
 
@@ -103,11 +95,6 @@ export async function addRecord(storeName, envelopeData) {
     }
 }
 
-/**
- * Retrieves records from database and automatically decrypts them back into transparent JSON objects.
- * @param {string} storeName - Target table name.
- * @returns {Promise<Array>} Decrypted records array ready for application consumption.
- */
 export async function getAllRecords(storeName) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -123,7 +110,6 @@ export async function getAllRecords(storeName) {
 
                 const decryptedRows = [];
                 for (const row of rawRows) {
-                    // Fallback check: If row lacks encrypted properties parameters, treat as unencrypted legacy row
                     if (!row.ciphertext) {
                         decryptedRows.push(row);
                         continue;
@@ -155,9 +141,6 @@ export async function getAllRecords(storeName) {
     });
 }
 
-/**
- * Wipes out a structural data record row matching primary incremented IDs pointers keys.
- */
 export async function deleteRecord(storeName, key) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -190,6 +173,42 @@ export async function getCachedDropdownOptions(storeKey) {
         const store = transaction.objectStore('dropdownOptions');
         const request = store.get(storeKey);
         request.onsuccess = () => resolve(request.result ? request.result.data : null);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// ============================================================================
+// 6. IN-PROGRESS FORM DRAFTS (real autosave, not just a "Save draft" toast)
+// ============================================================================
+export async function saveDraft(draftKey, fieldsSnapshot) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('drafts', 'readwrite');
+        const store = transaction.objectStore('drafts');
+        const request = store.put({ draftKey, fieldsSnapshot, savedAt: Date.now() });
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+export async function getDraft(draftKey) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('drafts', 'readonly');
+        const store = transaction.objectStore('drafts');
+        const request = store.get(draftKey);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+export async function deleteDraft(draftKey) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('drafts', 'readwrite');
+        const store = transaction.objectStore('drafts');
+        const request = store.delete(draftKey);
+        request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
     });
 }
