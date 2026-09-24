@@ -1,7 +1,8 @@
+<!-- src/features/survey/SurveyForm.vue -->
 <template>
-    <div class="p-4 space-y-8 animate-fade-in">
-        <SharedForm :formConfig="formConfig" @onSubmit="handleFormPublishPipeline" />
-    </div>
+  <div class="p-4 space-y-8 animate-fade-in">
+    <SharedForm :formConfig="formConfig" @onSubmit="handleFormPublishPipeline" />
+  </div>
 </template>
 
 <script setup>
@@ -10,123 +11,108 @@ import { useRouter } from 'vue-router'
 import SharedForm from '@/components/Form.vue'
 import { addRecord, getCachedDropdownOptions } from '@/database/db.js'
 import { transformFacilityDropdownOptions } from '@/domain/mappers.js'
+
 const toast = inject('toast')
 const router = useRouter()
 
 // ============================================================================
-// 1. BANKING DECLARATIVE MORTGAGE APPRAISAL MATRIX CONFIGURATION
+// 🛠️ MULTIPLE TABS TESTING CONFIGURATION MATRIX (8 SECTIONS)
 // ============================================================================
 const formConfig = ref({
-    title: 'Bank Mortgage Collateral Valuation Assessment',
-    fields: [
-        // Section 1: Auditor Metadata Certification
-        { type: 'text', name: 'operator', label: 'Assigned Bank Surveyor ID', value: 'BANK-SURV-2026', required: true },
-        { type: 'text', name: 'appraisalTicket', label: 'Mortgage Loan Reference Ticket', placeholder: 'e.g., MRTG-9921A-JKT', required: true },
+  title: 'LPA Internal Appraisal Processing Node',
+  
+  // 8 structural sections matching your uploaded enterprise bank dashboard snapshot
+  tabs: [
+    { title: '1. Data Umum', fields: ['operator', 'appraisalTicket', 'lokasiCabang'] },
+    { title: '2. Data Tanah', fields: ['shmCertificateNumber', 'luasTanah'] },
+    { title: '3. Data Bangunan', fields: ['facilityType', 'tahunKonstruksi'] },
+    { title: '4. Data Lingkungan', fields: ['lebarJalan', 'kondisiBanjir'] },
+    { title: '5. Nilai Agunan', fields: ['nilaiPasar', 'nilaiLikuidasi'] },
+    { title: '6. Marketability', fields: ['marketabilityClass', 'catatanPasar'] },
+    { title: '7. Negative List', fields: ['isNearCemetery', 'jarakSUTET'] },
+    { title: '8. Data Lampiran', fields: ['propertyFacadePhoto', 'landBlueprints', 'auditLocation'] }
+  ],
+  
+  fields: [
+    // Tab 1: Data Umum
+    { type: 'text', name: 'operator', label: 'Assigned Bank Surveyor ID', value: 'BANK-SURV-2026', required: true },
+    { type: 'text', name: 'appraisalTicket', label: 'Nomer Order / Ticket Reference', placeholder: 'e.g., 2026062500106', required: true },
+    { type: 'select', name: 'lokasiCabang', label: 'Lokasi Cabang Operasional', placeholder: 'Pilih cabang...', required: true, options: ['Jakarta', 'Tangerang', 'Bekasi', 'Surabaya'], value: '' },
 
-        // Section 2: Property Core Identifiers & Certificates
-        { type: 'text', name: 'shmCertificateNumber', label: 'Sertifikat Hak Milik (SHM) Reference Code', placeholder: 'Enter official land book certificate number', required: true },
-        { type: 'select', name: 'facilityType', label: 'Collateral Property Classification', placeholder: 'Select architectural class...', required: false, options: [], value: '' },
+    // Tab 2: Data Tanah
+    { type: 'text', name: 'shmCertificateNumber', label: 'Sertifikat Hak Milik (SHM) Code', placeholder: 'Enter official land book certificate number', required: true },
+    { type: 'text', name: 'luasTanah', label: 'Luas Tanah (M2)', placeholder: 'e.g., 120', required: true },
 
-        // Section 3: High-Performance Auto-Compressing Photographic Documentation Node
-        {
-            type: 'camera',
-            name: 'propertyFacadePhoto',
-            label: 'Main Exterior Property Facade Documentation Photo (16:9 Aspect Lock)',
-            required: true,
-            value: '' // Holds optimized, canvas-downscaled Base64 JPEG data URL cleanly inside memory
-        },
+    // Tab 3: Data Bangunan
+    { type: 'select', name: 'facilityType', label: 'Jenis Objek Penilaian (Fisik)', placeholder: 'Select architectural class...', required: true, options: [], value: '' },
+    { type: 'text', name: 'tahunKonstruksi', label: 'Tahun Konstruksi Bangunan', placeholder: 'e.g., 2018', required: true },
 
-        // Section 4: Anti-Fraud Spatial Telemetry Audit Pinpoint
-        {
-            type: 'map',
-            name: 'auditLocation',
-            label: 'Collateral Geo-Coordinates Audit Boundary (Locked 16:9 Aspect)',
-            displayValue: '-6.208840, 106.845580', // Centered precisely on South Jakarta office coordinates
-            hidden: false,
-            value: '' // Real hardware GPS tracking metrics automatically recorded upon submit click
-        },
+    // Tab 4: Data Lingkungan
+    { type: 'text', name: 'lebarJalan', label: 'Lebar Jalan Depan Aset (Meter)', placeholder: 'e.g., 6', required: true },
+    { type: 'select', name: 'kondisiBanjir', label: 'Status Bebas Potensi Banjir', placeholder: 'Pilih status...', required: true, options: ['Bebas Banjir', 'Rawan Banjir Seasonal', 'Pernah Banjir ( < 5 Tahun)'], value: '' },
 
-        // Section 5: Structural Risk Assessments
-        { type: 'select', name: 'structuralRisk', label: 'Visible Structural Risk Assessment Level', placeholder: 'Select assessment category...', required: true, options: ['LOW / Minor Cosmetic Flaws', 'MEDIUM / Settling Cracks Noted', 'HIGH / Structural Integrity Degradation'], value: '' },
+    // Tab 5: Nilai Agunan
+    { type: 'text', name: 'nilaiPasar', label: 'Estimasi Nilai Pasar Properti (IDR)', placeholder: 'e.g., 1500000000', required: true },
+    { type: 'text', name: 'nilaiLikuidasi', label: 'Estimasi Nilai Likuidasi Bank (IDR)', placeholder: 'e.g., 1050000000', required: true },
 
-        // Section 6: Dynamic Conditional Risk Parameters (Expands only if risk is marked HIGH)
-        {
-            type: 'textarea',
-            name: 'incidentReport',
-            label: 'Mandatory Structural Degradation & Risk Mitigation Assessment Logs',
-            placeholder: 'Detail foundation shifts, heavy wall cracks, moisture leakages, or structural integrity threats...',
-            required: true,
-            value: '',
-            visibleIf: { field: 'structuralRisk', value: 'HIGH / Structural Integrity Degradation' }
-        },
+    // Tab 6: Marketability & Catatan
+    { type: 'select', name: 'marketabilityClass', label: 'Tingkat Marketability Agunan', placeholder: 'Pilih kelas...', required: true, options: ['Tinggi / Sangat Likuid', 'Sedang / Normal Market', 'Rendah / Penjualan Terbatas'], value: '' },
+    { type: 'textarea', name: 'catatanPasar', label: 'Catatan & Analisis Dinamika Pasar Lokal', placeholder: 'Ketik observasi perkembangan harga properti sekitar...', required: false, value: '' },
 
-        // Section 7: Official Property Land Boundaries Mapping Blueprints
-        { type: 'canvas', name: 'landBlueprints', label: 'Lot Boundary Perimeter & House Footprint Layout Blueprint Draft', required: true, multi: false, value: '' }
-    ]
+    // Tab 7: Negative List & Pertimbangan Khusus
+    { type: 'select', name: 'isNearCemetery', label: 'Dekat dengan Makam / Kuburan ( < 50m)', placeholder: 'Pilih...', required: true, options: ['Tidak', 'Ya / Menempel'], value: '' },
+    { type: 'text', name: 'jarakSUTET', label: 'Jarak Aman ke Jaringan SUTET (Meter)', placeholder: 'Ketik 0 jika tidak ada SUTET', required: true },
+
+    // Tab 8: Data Lampiran (Heavy Media Inputs)
+    { type: 'camera', name: 'propertyFacadePhoto', label: 'Foto Fasad Utama Exterior Agunan (16:9)', required: true, value: '' },
+    { type: 'map', name: 'auditLocation', label: 'Audit Pinpoint Geolocation Telemetry', displayValue: '-6.208840, 106.845580', hidden: false, value: '' },
+    { type: 'canvas', name: 'landBlueprints', label: 'Plot Outline Perimeter Blueprint Sketch', required: true, multi: false, value: '' }
+  ]
 })
 
 // ============================================================================
-// 2. TRANSACTION PIPELINE & HARDWARE ACCELERATED SYNC SCHEDULERS
+// TRANSACTION PIPELINE INTERACTION HANDLERS
 // ============================================================================
-/**
- * Processes banking appraisal data safely. Writes immediately to local device IndexedDB,
- * and requests the OS SyncManager to handle server updates in the background.
- * @param {Object} flattenedFormData - Cleansed key-value dictionary payload from Form.vue
- */
 const handleFormPublishPipeline = async (flattenedFormData) => {
-    const transactionEnvelope = {
-        timestamp: Date.now(),
-        status: 'pending',
-        payload: flattenedFormData
+  const transactionEnvelope = {
+    timestamp: Date.now(),
+    status: 'pending',
+    payload: flattenedFormData
+  }
+
+  await addRecord('syncQueue', transactionEnvelope)
+
+  let isBackgroundSyncRegistered = false
+  if ('serviceWorker' in navigator && 'SyncManager' in window) {
+    try {
+      const registration = await navigator.serviceWorker.ready
+      await registration.sync.register('tomcat-form-flush')
+      isBackgroundSyncRegistered = true
+    } catch {
+      isBackgroundSyncRegistered = false
     }
+  }
 
-    await addRecord('syncQueue', transactionEnvelope)
+  if (navigator.onLine && isBackgroundSyncRegistered) {
+    toast.success('Appraisal Record Synchronized', `LPA Ticket reference successfully sent to Tomcat.`)
+  } else {
+    toast.offline('Cached Securely Offline', 'Data encrypted inside IndexedDB repository. Pending recovery loop flush.')
+  }
 
-    let isBackgroundSyncRegistered = false
-    if ('serviceWorker' in navigator && 'SyncManager' in window) {
-        try {
-            const registration = await navigator.serviceWorker.ready
-            await registration.sync.register('tomcat-form-flush')
-            isBackgroundSyncRegistered = true
-        } catch {
-            isBackgroundSyncRegistered = false
-        }
+  formConfig.value.fields.forEach(field => {
+    if (field.name !== 'operator' && field.type !== 'canvas') {
+      field.value = ''
     }
+  })
 
-    if (navigator.onLine && isBackgroundSyncRegistered) {
-        toast.success(
-            'Appraisal Record Synchronized',
-            `Ticket reference ${flattenedFormData.appraisalTicket || 'log'} sent straight to Tomcat.`
-        )
-    } else {
-        toast.offline(
-            'Cached Securely Offline',
-            'Data encrypted in IndexedDB. Device will auto-flush upon hardware network recovery.'
-        )
-    }
-
-    formConfig.value.fields.forEach(field => {
-        if (field.name !== 'operator') field.value = field.type === 'canvas' && field.multi ? [] : ''
-    })
-
-    router.push({ name: 'inquiry' })
+  router.push({ name: 'inquiry' })
 }
 
-// ============================================================================
-// 3. LIFECYCLE INITIALIZATION METADATA LOADERS
-// ============================================================================
-const loadBankingSelectOptions = async () => {
-    // Load facility classifications cached during our First-Run Setup Shield
-    const cachedClassifications = await getCachedDropdownOptions('facilityTypesList')
-    const classificationField = formConfig.value.fields.find(f => f.name === 'facilityType')
-
-    if (classificationField && cachedClassifications) {
-        // Execute safety mapping transformation right at the consumption boundary site
-        classificationField.options = transformFacilityDropdownOptions(cachedClassifications)
-    }
-}
-
-onMounted(() => {
-    loadBankingSelectOptions()
+onMounted(async () => {
+  const cachedClassifications = await getCachedDropdownOptions('facilityTypesList')
+  const classificationField = formConfig.value.fields.find(f => f.name === 'facilityType')
+  if (classificationField && cachedClassifications) {
+    classificationField.options = transformFacilityDropdownOptions(cachedClassifications)
+  }
 })
 </script>
