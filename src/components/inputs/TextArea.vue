@@ -4,7 +4,7 @@
                 class="text-red-500 font-bold ml-0.5">*</span></span>
         <textarea ref="textareaRef" v-model="inputValue" :placeholder="placeholder" @input="adjustHeight"
             :class="error ? 'border-red-500' : 'border-slate-300 focus:ring-primary'"
-            class="border rounded-xl p-2.5 w-full text-sm bg-white text-slate-900 focus:outline-none focus:ring-1 shadow-xs resize-none overflow-hidden"
+            class="border rounded-xl p-2.5 w-full text-base bg-white text-slate-900 focus:outline-none focus:ring-1 shadow-xs resize-none overflow-hidden"
             rows="4"></textarea>
         <span v-if="error" class="text-xs text-red-500 font-semibold mt-1 block">{{ error }}</span>
     </div>
@@ -31,8 +31,6 @@ watch(inputValue, async () => {
 
 onMounted(() => {
     adjustHeight()
-
-    // Intercepts layout transitions from display: none to visible blocks
     if (textareaRef.value && window.ResizeObserver) {
         resizeObserver = new ResizeObserver(() => {
             adjustHeight()

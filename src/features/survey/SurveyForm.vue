@@ -30,42 +30,47 @@ const formConfig = ref({
   ],
   
   fields: [
-    // Tab 1: Data Umum
-   { type: 'text', name: 'noOrder', label: 'No. Order', value: '2025062500106', autoFilled: true, pinned: true },
-  { type: 'text', name: 'nomerLPA', label: 'Nomer LPA', value: '', autoFilled: true },
-  { type: 'text', name: 'cpDitemui', label: 'CP yang ditemui', value: 'DIRGA', autoFilled: true, pinned: true },
-  { type: 'text', name: 'namaDebitur', label: 'Nama Debitur', value: 'LAY SUSANTO', autoFilled: true },
-  { type: 'text', name: 'jenisObjekOrder', label: 'Jenis Object Penilaian (Order)', value: 'Rumah Tinggal', autoFilled: true },
-  { type: 'text', name: 'propinsi', label: 'Propinsi', value: 'BANTEN', autoFilled: true },
-  { type: 'text', name: 'kabupaten', label: 'Kabupaten/Kotamadya', value: 'TANGERANG', autoFilled: true },
-  { type: 'text', name: 'kecamatan', label: 'Kecamatan', value: 'CISAUK', autoFilled: true },
-  { type: 'text', name: 'desaKelurahan', label: 'Desa/Kelurahan', value: 'CISAUK', autoFilled: true },
-  { type: 'text', name: 'kategoriSLA', label: 'Kategori SLA Agunan', value: '', autoFilled: true },
-  { type: 'text', name: 'sla', label: 'SLA', value: '0', autoFilled: true },
-  { type: 'text', name: 'tanggalOrder', label: 'Tanggal Order', value: '25-06-2025', autoFilled: true },
+    // Tab 1: Data Umum — matches "Generate LPA Internal Appraisal" screenshot exactly.
+    // autoFilled: comes from the assigned order, not typed by the surveyor -> rendered
+    // in CollapsedInfoCard instead of the editable flow below.
+    // pinned: stays visible in the card's collapsed summary row.
+    { type: 'text', name: 'noOrder', label: 'No. Order', value: '2025062500106', autoFilled: true, pinned: true },
+    { type: 'text', name: 'nomerLPA', label: 'Nomer LPA', value: '', autoFilled: true },
+    { type: 'text', name: 'cpDitemui', label: 'CP yang ditemui', value: 'DIRGA', autoFilled: true, pinned: true },
+    { type: 'text', name: 'namaDebitur', label: 'Nama Debitur', value: 'LAY SUSANTO', autoFilled: true },
+    { type: 'text', name: 'jenisObjekOrder', label: 'Jenis Object Penilaian (Order)', value: 'Rumah Tinggal', autoFilled: true },
+    { type: 'text', name: 'propinsi', label: 'Propinsi', value: 'BANTEN', autoFilled: true },
+    { type: 'text', name: 'kabupaten', label: 'Kabupaten/Kotamadya', value: 'TANGERANG', autoFilled: true },
+    { type: 'text', name: 'kecamatan', label: 'Kecamatan', value: 'CISAUK', autoFilled: true },
+    { type: 'text', name: 'desaKelurahan', label: 'Desa/Kelurahan', value: 'CISAUK', autoFilled: true },
+    { type: 'text', name: 'kategoriSLA', label: 'Kategori SLA Agunan', value: '', autoFilled: true },
+    { type: 'text', name: 'sla', label: 'SLA', value: '0', autoFilled: true },
+    { type: 'text', name: 'tanggalOrder', label: 'Tanggal Order', value: '25-06-2025', autoFilled: true },
 
-  { type: 'select', name: 'jenisObjekFisik', label: 'Jenis Object Penilaian (Fisik)', placeholder: '-- Select --', required: true, options: ['Rumah Tinggal', 'Apartemen', 'Ruko/Rukan', 'Gudang'], value: '' },
-  { type: 'select', name: 'lokasiCabang', label: 'Lokasi Cabang', placeholder: 'Pilih cabang...', options: ['Jakarta', 'Tangerang', 'Bekasi', 'Surabaya'], value: 'Jakarta' },
-  { type: 'textarea', name: 'lokasiAgunanFisik', label: 'Lokasi Agunan (Fisik)', value: 'GIANTARA SERPONG CITY CLUSTER NERIN JALAN NERIN III NO 8 TYPE MAIRA STANDARD' },
+    // Editable fields the surveyor actually fills in or confirms on-site.
+    { type: 'select', name: 'jenisObjekFisik', label: 'Jenis Object Penilaian (Fisik)', placeholder: '-- Select --', required: true, options: ['Rumah Tinggal', 'Apartemen', 'Ruko/Rukan', 'Gudang'], value: '' },
+    { type: 'select', name: 'lokasiCabang', label: 'Lokasi Cabang', placeholder: 'Pilih cabang...', options: ['Jakarta', 'Tangerang', 'Bekasi', 'Surabaya'], value: 'Jakarta' },
+    { type: 'textarea', name: 'lokasiAgunanFisik', label: 'Lokasi Agunan (Fisik)', value: 'GIANTARA SERPONG CITY CLUSTER NERIN JALAN NERIN III NO 8 TYPE MAIRA STANDARD' },
 
-  { type: 'text', name: 'namaPerumahan', label: 'Nama Perumahan/Apartment', value: '', visibleIf: { field: 'jenisObjekFisik', value: 'Apartemen' } },
-  { type: 'text', name: 'namaCluster', label: 'Nama Cluster/Tower', value: '', visibleIf: { field: 'jenisObjekFisik', value: 'Apartemen' } },
+    // Only relevant for apartment/tower-type properties — hidden otherwise.
+    { type: 'text', name: 'namaPerumahan', label: 'Nama Perumahan/Apartment', value: '', visibleIf: { field: 'jenisObjekFisik', value: 'Apartemen' } },
+    { type: 'text', name: 'namaCluster', label: 'Nama Cluster/Tower', value: '', visibleIf: { field: 'jenisObjekFisik', value: 'Apartemen' } },
 
-  { type: 'text', name: 'blokGangLantai', label: 'Blok/Gang/Lantai', value: 'NERIN III NO 8 TYPE MAIRA STANDARD' },
-  { type: 'text', name: 'nomorUnit', label: 'Nomor', value: '' },
-  { type: 'text', name: 'rt', label: 'RT', value: '' },
-  { type: 'text', name: 'rw', label: 'RW', value: '' },
-  { type: 'select', name: 'posisiLokasi', label: 'Posisi Lokasi Agunan', placeholder: '-- Select --', required: true, options: ['Dalam Kota', 'Luar Kota', 'Pinggir Kota'], value: '' },
-  { type: 'text', name: 'kodePos', label: 'Kode Pos', value: '15341' },
-  { type: 'select', name: 'statusJaminan', label: 'Status Jaminan', options: ['Baru', 'Existing'], value: 'Baru' },
-  { type: 'text', name: 'tanggalSurvey', label: 'Tanggal Survey', placeholder: 'DD-MM-YYYY', required: true, value: '' },
-  { type: 'text', name: 'penilaianDitujukanKe', label: 'Penilaian ditujukan ke', value: 'Cici Dwi Astuti' },
-  { type: 'select', name: 'ditinjauOleh', label: 'Ditinjau Oleh', options: ['Achmad MasNullud', 'Dwinofeli Agustiawan', 'Fani Yofrisa Ismar'], value: 'Achmad MasNullud' },
-  { type: 'text', name: 'diantarOleh', label: 'Diantar/Ditemui Oleh', value: '' },
-  { type: 'text', name: 'catatanHasilSurvey', label: 'Catatan Hasil Survey', value: '' },
-  { type: 'select', name: 'mataUang', label: 'Mata Uang', options: ['IDR', 'USD'], value: 'IDR' },
-  { type: 'text', name: 'tanggalRate', label: 'Tanggal Rate', value: '26-06-2025' },
-  { type: 'text', name: 'nilaiRate', label: 'Nilai Rate', value: '1' },
+    { type: 'text', name: 'blokGangLantai', label: 'Blok/Gang/Lantai', value: 'NERIN III NO 8 TYPE MAIRA STANDARD' },
+    { type: 'text', name: 'nomorUnit', label: 'Nomor', inputmode: 'numeric', value: '' },
+    { type: 'text', name: 'rt', label: 'RT', inputmode: 'numeric', value: '' },
+    { type: 'text', name: 'rw', label: 'RW', inputmode: 'numeric', value: '' },
+    { type: 'select', name: 'posisiLokasi', label: 'Posisi Lokasi Agunan', placeholder: '-- Select --', required: true, options: ['Dalam Kota', 'Luar Kota', 'Pinggir Kota'], value: '' },
+    { type: 'text', name: 'kodePos', label: 'Kode Pos', inputmode: 'numeric', value: '15341' },
+    { type: 'select', name: 'statusJaminan', label: 'Status Jaminan', options: ['Baru', 'Existing'], value: 'Baru' },
+    { type: 'text', name: 'tanggalSurvey', label: 'Tanggal Survey', inputType: 'date', required: true, value: '' },
+    { type: 'text', name: 'penilaianDitujukanKe', label: 'Penilaian ditujukan ke', value: 'Cici Dwi Astuti' },
+    { type: 'select', name: 'ditinjauOleh', label: 'Ditinjau Oleh', options: ['Achmad MasNullud', 'Dwinofeli Agustiawan', 'Fani Yofrisa Ismar'], value: 'Achmad MasNullud' },
+    { type: 'text', name: 'diantarOleh', label: 'Diantar/Ditemui Oleh', value: '' },
+    { type: 'text', name: 'catatanHasilSurvey', label: 'Catatan Hasil Survey', value: '' },
+    { type: 'select', name: 'mataUang', label: 'Mata Uang', options: ['IDR', 'USD'], value: 'IDR' },
+    { type: 'text', name: 'tanggalRate', label: 'Tanggal Rate', inputType: 'date', value: '2025-06-26' },
+    { type: 'text', name: 'nilaiRate', label: 'Nilai Rate', inputmode: 'decimal', value: '1' },
 
     // Tab 2: Data Tanah
     { type: 'text', name: 'shmCertificateNumber', label: 'Sertifikat Hak Milik (SHM) Code', placeholder: 'Enter official land book certificate number', required: true },
@@ -125,7 +130,7 @@ const handleFormPublishPipeline = async (flattenedFormData) => {
   }
 
   formConfig.value.fields.forEach(field => {
-    if (field.name !== 'operator' && field.type !== 'canvas') {
+    if (!field.autoFilled && field.type !== 'canvas') {
       field.value = ''
     }
   })
