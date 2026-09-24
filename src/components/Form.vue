@@ -15,10 +15,17 @@
             v-for="(tab, idx) in formConfig.tabs"
             :key="idx"
             type="button"
-            @click="activeTabIdx = idx"
-            :class="activeTabIdx === idx ? 'bg-primary text-white font-semibold shadow-xs' : 'text-slate-500 hover:bg-slate-50 font-medium'"
-            class="px-4 py-2 text-xs rounded-xl transition-all duration-150 cursor-pointer whitespace-nowrap focus:outline-none"
+            @click="handleTabClick(idx)"
+            :disabled="!isTabReachable(idx)"
+            :class="[
+              activeTabIdx === idx ? 'bg-primary text-white font-semibold shadow-xs' : 'text-slate-500 hover:bg-slate-50 font-medium',
+              !isTabReachable(idx) ? 'opacity-40 cursor-not-allowed hover:bg-transparent' : 'cursor-pointer'
+            ]"
+            class="px-4 py-2 text-xs rounded-xl transition-all duration-150 whitespace-nowrap focus:outline-none flex items-center gap-1.5"
           >
+            <svg v-if="!isTabReachable(idx)" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
             {{ tab.title }}
           </button>
         </div>
@@ -38,17 +45,22 @@
             </button>
           </div>
 
-          <div class="flex w-full gap-1.5 h-1">
-            <div
+          <div class="flex w-full gap-1.5 h-2.5">
+            <button
               v-for="(tab, idx) in formConfig.tabs"
               :key="idx"
+              type="button"
+              @click="handleTabClick(idx)"
+              :disabled="!isTabReachable(idx)"
+              :aria-label="`${tab.title}${!isTabReachable(idx) ? ' (locked)' : ''}`"
               :class="[
                 idx < activeTabIdx ? 'bg-teal-600' : '',
                 idx === activeTabIdx ? 'bg-primary' : '', 
-                idx > activeTabIdx ? 'bg-slate-200' : ''
+                idx > activeTabIdx ? 'bg-slate-200' : '',
+                isTabReachable(idx) ? 'cursor-pointer' : 'cursor-not-allowed'
               ]"
-              class="flex-1 rounded-full transition-all duration-300"
-            ></div>
+              class="flex-1 rounded-full transition-all duration-300 focus:outline-none"
+            ></button>
           </div>
 
           <div class="pt-3 animate-fade-in">
@@ -61,11 +73,13 @@
           </div>
         </div>
 
+        <CollapsedInfoCard :fields="formConfig?.fields ?? []" />
+
         <div class="space-y-5 flex-1 bg-white">
           <div 
             v-for="(field, index) in formConfig?.fields" 
             :key="index" 
-            v-show="isFieldVisible(field) && isFieldInActiveTab(field)" 
+            v-show="!field.autoFilled && isFieldVisible(field) && isFieldInActiveTab(field)" 
             class="flex flex-col form-field-row"
           >
             <component 
@@ -105,7 +119,6 @@
             &lt; Back
           </button>
 
-          <!-- 🛠️ UPDATED BUTTON TEXT: CHANGED FROM 'Save and continue' TO 'Next' -->
           <button
             v-if="activeTabIdx < formConfig.tabs.length - 1"
             type="button"
@@ -130,13 +143,14 @@
 </template>
 
 <script setup>
-import { ref, watch, inject } from 'vue'
+import { ref, computed, watch, inject } from 'vue'
 import TextInput from '@/components/inputs/TextInput.vue'
 import TextArea from '@/components/inputs/TextArea.vue'
 import MapDisplay from '@/components/inputs/MapDisplay.vue'
 import SelectInput from '@/components/inputs/SelectInput.vue'
 import CameraCapture from '@/components/inputs/CameraCapture.vue'
 import CanvasDraw from '@/components/inputs/canvasdraw/CanvasDraw.vue'
+import CollapsedInfoCard from '@/components/CollapsedInfoCard.vue'
 
 const emit = defineEmits(['onSubmit'])
 const props = defineProps({ formConfig: { type: Object, default: () => ({ fields: [] }) } })
@@ -163,6 +177,42 @@ const isFieldVisible = (field) => {
   if (!field.visibleIf) return true
   const target = props.formConfig.fields.find(f => f.name === field.visibleIf.field)
   return target ? String(target.value).trim() === String(field.visibleIf.value).trim() : true
+}
+
+// A tab counts as complete once every visible required field inside it has a value.
+// Used to figure out how far ahead someone is allowed to jump.
+const isTabComplete = (idx) => {
+  const tab = props.formConfig.tabs?.[idx]
+  if (!tab) return true
+  return tab.fields.every(fieldName => {
+    const field = props.formConfig.fields.find(f => f.name === fieldName)
+    if (!field || !field.required || !isFieldVisible(field)) return true
+    const value = field.value
+    return !(!value || (Array.isArray(value) && value.length === 0) || (typeof value === 'string' && value.trim() === ''))
+  })
+}
+
+// The furthest tab reachable right now: every completed tab, plus the first
+// incomplete one (so you can always continue where you left off). Anything
+// past that is locked until earlier required fields are filled in.
+const maxReachableTabIdx = computed(() => {
+  const tabs = props.formConfig.tabs
+  if (!tabs || tabs.length === 0) return 0
+  for (let i = 0; i < tabs.length; i++) {
+    if (!isTabComplete(i)) return i
+  }
+  return tabs.length - 1
+})
+
+const isTabReachable = (idx) => idx <= maxReachableTabIdx.value
+
+const handleTabClick = (idx) => {
+  if (!isTabReachable(idx)) {
+    toast.error('Complete earlier steps first', 'Finish the required fields on the current step before jumping ahead.')
+    return
+  }
+  activeTabIdx.value = idx
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const validateActiveTabFieldsOnly = () => {
