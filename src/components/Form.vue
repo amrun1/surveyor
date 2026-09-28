@@ -76,20 +76,48 @@
         <CollapsedInfoCard :fields="activeTabAutoFilledFields" />
 
         <div class="space-y-5 flex-1 bg-white">
-          <div 
-            v-for="(field, index) in formConfig?.fields" 
-            :key="index" 
-            :id="`field-${field.name}`"
-            v-show="!field.autoFilled && isFieldVisible(field) && isFieldInActiveTab(field)" 
-            class="flex flex-col form-field-row scroll-mt-24"
-          >
-            <component 
-              :is="componentMaps[field.type]" 
-              v-model="field.value" 
-              v-bind="field" 
-              :error="fieldErrors[field.name]"
-            />
-          </div>
+          <template v-for="(field, idx) in visibleTabFields" :key="field.name">
+            <div v-if="field.section && field.section !== visibleTabFields[idx - 1]?.section"
+              class="pt-1 first:pt-0">
+              <button v-if="isSectionCollapsible(field.section)" type="button"
+                @click="toggleSection(field.section)"
+                class="w-full flex items-center justify-between mb-2 cursor-pointer bg-transparent border-none p-0 focus:outline-none">
+                <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400">{{ field.section }}</h3>
+                <span class="flex items-center gap-1.5 text-slate-400">
+                  <span v-if="isSectionCollapsed(field.section)"
+                    class="text-[11px] font-semibold normal-case tracking-normal">
+                    {{ sectionFieldCounts[field.section] }} fields
+                  </span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                    class="transition-transform duration-200"
+                    :class="{ '-rotate-90': isSectionCollapsed(field.section) }">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </span>
+              </button>
+              <h3 v-else class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">{{ field.section }}
+              </h3>
+              <div class="border-b border-slate-100 mb-4"></div>
+            </div>
+
+            <template v-if="!(isSectionCollapsible(field.section) && isSectionCollapsed(field.section))">
+              <div v-if="field.layout === 'compass' && field.compassRole === 'north'" :id="`field-${field.name}`"
+                class="scroll-mt-24">
+                <CompassInput :group="compassGroups[field.compassGroup]" />
+              </div>
+
+              <div v-else-if="field.layout !== 'compass'" :id="`field-${field.name}`"
+                class="flex flex-col form-field-row scroll-mt-24">
+                <component 
+                  :is="resolveFieldComponent(field)" 
+                  v-model="field.value" 
+                  v-bind="field" 
+                  :error="fieldErrors[field.name]"
+                />
+              </div>
+            </template>
+          </template>
         </div>
       </div>
 
@@ -152,6 +180,8 @@ import SelectInput from '@/components/inputs/SelectInput.vue'
 import CameraCapture from '@/components/inputs/CameraCapture.vue'
 import CanvasDraw from '@/components/inputs/canvasdraw/CanvasDraw.vue'
 import CollapsedInfoCard from '@/components/CollapsedInfoCard.vue'
+import ReadOnlyField from '@/components/inputs/ReadOnlyField.vue'
+import CompassInput from '@/components/inputs/CompassInput.vue'
 
 const emit = defineEmits(['onSubmit', 'onDraftChange'])
 const props = defineProps({ formConfig: { type: Object, default: () => ({ fields: [] }) } })
@@ -168,9 +198,10 @@ const componentMaps = {
   camera: CameraCapture 
 }
 
-const activeTabAutoFilledFields = computed(() =>
-  props.formConfig.fields.filter(f => f.autoFilled && isFieldInActiveTab(f))
-)
+// A field's `type` says what widget it WOULD be; `computed: true` overrides that with
+// a read-only display instead, regardless of type — a computed select-type field (if
+// one ever exists) gets the same plain info card as a computed text field.
+const resolveFieldComponent = (field) => field.computed ? ReadOnlyField : componentMaps[field.type]
 
 const isFieldInActiveTab = (field) => {
   if (!props.formConfig.tabs || props.formConfig.tabs.length === 0) return true
@@ -184,6 +215,64 @@ const isFieldVisible = (field) => {
   return target ? String(target.value).trim() === String(field.visibleIf.value).trim() : true
 }
 
+// Only the autoFilled fields that belong to the tab currently open — so the card
+// doesn't show order-level info while someone's on, say, Data Bangunan.
+const activeTabAutoFilledFields = computed(() =>
+  props.formConfig.fields.filter(f => f.autoFilled && isFieldInActiveTab(f))
+)
+
+// Fields actually rendered in the main editable flow, in formConfig order — used both
+// for the v-for itself and to detect where one field's `section` differs from the
+// previous one, so a header can be inserted between them.
+const visibleTabFields = computed(() =>
+  props.formConfig.fields.filter(f => !f.autoFilled && isFieldVisible(f) && isFieldInActiveTab(f))
+)
+
+// Fields with `layout: 'compass'` render together as one CompassInput grid instead of
+// four separate rows. Grouped by `compassGroup` (a plain string shared across the four
+// fields) rather than relying on array position, so they don't need to be adjacent in
+// formConfig.fields to end up in the same grid.
+const compassGroups = computed(() => {
+  const groups = {}
+  for (const f of visibleTabFields.value) {
+    if (f.layout === 'compass' && f.compassGroup && f.compassRole) {
+      groups[f.compassGroup] = groups[f.compassGroup] || {}
+      groups[f.compassGroup][f.compassRole] = f
+    }
+  }
+  return groups
+})
+
+// --- Collapsible sections -------------------------------------------------
+// Only sections past a field-count threshold get a collapse toggle at all — a
+// 3-field section is already quick to scan, and forcing a tap-to-expand on it
+// would be friction with no real benefit. Applies at every viewport: the field
+// layout inside a tab doesn't currently change by breakpoint, so the long-scroll
+// problem this solves exists identically on desktop as on mobile.
+const COLLAPSIBLE_SECTION_THRESHOLD = 8
+
+const sectionFieldCounts = computed(() => {
+  const counts = {}
+  for (const f of visibleTabFields.value) {
+    if (f.section) counts[f.section] = (counts[f.section] || 0) + 1
+  }
+  return counts
+})
+
+const isSectionCollapsible = (section) => (sectionFieldCounts.value[section] || 0) > COLLAPSIBLE_SECTION_THRESHOLD
+
+// Keyed by tab + section (not section alone) so identical section names in
+// different tabs, if that ever happens, don't share collapse state.
+const collapsedSections = ref({})
+const sectionKey = (section) => `${activeTabIdx.value}:${section}`
+const isSectionCollapsed = (section) => !!collapsedSections.value[sectionKey(section)]
+const toggleSection = (section) => {
+  const key = sectionKey(section)
+  collapsedSections.value[key] = !collapsedSections.value[key]
+}
+
+// A tab counts as complete once every visible required field inside it has a value.
+// Used to figure out how far ahead someone is allowed to jump.
 const isTabComplete = (idx) => {
   const tab = props.formConfig.tabs?.[idx]
   if (!tab) return true
@@ -195,6 +284,9 @@ const isTabComplete = (idx) => {
   })
 }
 
+// The furthest tab reachable right now: every completed tab, plus the first
+// incomplete one (so you can always continue where you left off). Anything
+// past that is locked until earlier required fields are filled in.
 const maxReachableTabIdx = computed(() => {
   const tabs = props.formConfig.tabs
   if (!tabs || tabs.length === 0) return 0
@@ -217,10 +309,20 @@ const handleTabClick = (idx) => {
 
 // Scrolls to the first field currently marked invalid, so a validation failure on a
 // long tab (e.g. Data Umum's 20 fields) doesn't leave the person hunting for what's wrong.
+// If that field lives inside a collapsed section, expand it first — scrollIntoView on a
+// v-if'd-out element is a silent no-op, so skipping this step would leave the person with
+// just the "missing fields" toast and no visible indication of where to look.
 const scrollToFirstError = async () => {
   await nextTick()
   const firstErrorName = Object.keys(fieldErrors.value)[0]
   if (!firstErrorName) return
+
+  const field = props.formConfig.fields.find(f => f.name === firstErrorName)
+  if (field?.section && isSectionCollapsible(field.section) && isSectionCollapsed(field.section)) {
+    collapsedSections.value[sectionKey(field.section)] = false
+    await nextTick()
+  }
+
   document.getElementById(`field-${firstErrorName}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
@@ -235,6 +337,11 @@ const emitDraftChange = (immediate = false) => {
   else autosaveTimer = setTimeout(fire, 600)
 }
 
+// Note: no `{ deep: true }` here on purpose. The getter already reads each field's
+// `.value` individually while mapping, so Vue tracks every one of those as a direct
+// dependency — deep traversal would only matter if a field's value were itself a
+// nested object/array, and every input type in this app (text, select, canvas, map,
+// camera) stores a plain string. Deep would just walk primitives for no benefit.
 watch(() => props.formConfig.fields.map(f => f.value), () => {
   if (Object.keys(fieldErrors.value).length > 0) validateActiveTabFieldsOnly()
   emitDraftChange()

@@ -65,6 +65,24 @@ export function useSync() {
 
     const handleNetworkOffline = () => { isOnline.value = false }
 
+    // Called by Login.vue right after a successful sign-in. pending_auth items are
+    // deliberately excluded from the normal pending-status flush above — they need
+    // an explicit successful login, not just connectivity, since connectivity alone
+    // can't confirm the session is actually valid again. This is what "graduates"
+    // them back into the normal sync path once that's actually happened.
+    const resolvePendingAuthRecords = async () => {
+        const items = await getAllRecords('syncQueue')
+        const pendingAuthItems = items.filter(item => item.status === 'pending_auth')
+
+        for (const item of pendingAuthItems) {
+            await deleteRecord('syncQueue', item.id)
+            await addRecord('syncQueue', { ...item, status: 'pending' })
+        }
+
+        if (pendingAuthItems.length > 0) await flushPendingSyncQueue()
+        return pendingAuthItems.length
+    }
+
     const setupSyncListeners = () => {
         window.addEventListener('online', handleNetworkOnline)
         window.addEventListener('offline', handleNetworkOffline)
@@ -75,5 +93,5 @@ export function useSync() {
         window.removeEventListener('offline', handleNetworkOffline)
     }
 
-    return { isOnline, isSyncing, checkTomcatHeartbeat, flushPendingSyncQueue, setupSyncListeners, cleanupSyncListeners }
+    return { isOnline, isSyncing, checkTomcatHeartbeat, flushPendingSyncQueue, resolvePendingAuthRecords, setupSyncListeners, cleanupSyncListeners }
 }

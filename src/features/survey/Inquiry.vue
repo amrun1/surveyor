@@ -27,13 +27,11 @@
 
             <!-- CUSTOM CELL INTERCEPTION B: STATUS BADGE MAPPING -->
             <template #cell(status)="{ value }">
-                <span
-                    :class="value === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200/60' : 'bg-teal-50 text-teal-700 border-teal-200/60'"
+                <span :class="statusBadgeClass(value)"
                     class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full border shadow-2xs">
                     <!-- Small status dot decoration inside badge box -->
-                    <span :class="value === 'pending' ? 'bg-amber-500' : 'bg-teal-500'"
-                        class="w-1.5 h-1.5 rounded-full"></span>
-                    {{ value === 'pending' ? 'Pending Sync' : 'Synced' }}
+                    <span :class="statusDotClass(value)" class="w-1.5 h-1.5 rounded-full"></span>
+                    {{ statusLabel(value) }}
                 </span>
             </template>
 
@@ -66,6 +64,15 @@ const tableHeaders = ref([
 // ============================================================================
 // 2. CORE STORAGE READ OPERATIONS LAYER
 // ============================================================================
+const STATUS_META = {
+    pending: { label: 'Pending Sync', badge: 'bg-amber-50 text-amber-700 border-amber-200/60', dot: 'bg-amber-500' },
+    pending_auth: { label: 'Needs Sign-in', badge: 'bg-red-50 text-red-700 border-red-200/60', dot: 'bg-red-500' },
+    synced: { label: 'Synced', badge: 'bg-teal-50 text-teal-700 border-teal-200/60', dot: 'bg-teal-500' }
+}
+const statusLabel = (value) => STATUS_META[value]?.label ?? value
+const statusBadgeClass = (value) => STATUS_META[value]?.badge ?? STATUS_META.pending.badge
+const statusDotClass = (value) => STATUS_META[value]?.dot ?? STATUS_META.pending.dot
+
 /**
  * Pulls raw data out of IndexedDB and maps it through our Anti-Corruption 
  * domain transformer script to ensure clean table bindings.

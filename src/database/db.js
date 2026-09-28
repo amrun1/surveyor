@@ -2,7 +2,7 @@
 // 1. DATABASE METADATA & CRYPTO CONSTANTS
 // ============================================================================
 const DB_NAME = 'SurveyorOfflineDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 // Secret corporate security passphrase seed (In production, derive this dynamically from user login session)
 const SECRET_PASSPHRASE_SEED = 'Permata-Mortgage-Secure-Salt-2026';
@@ -10,6 +10,10 @@ const SECRET_PASSPHRASE_SEED = 'Permata-Mortgage-Secure-Salt-2026';
 // ============================================================================
 // 2. HARDWARE-ACCELERATED ENCRYPTION KEY DERIVATION
 // ============================================================================
+/**
+ * Derives a type-safe cryptographic key from a static passphrase seed token using PBKDF2
+ * @returns {Promise<CryptoKey>}
+ */
 async function getCryptoKey() {
     const enc = new TextEncoder();
     const keyMaterial = await window.crypto.subtle.importKey(
@@ -51,6 +55,9 @@ export function openDB() {
             if (!db.objectStoreNames.contains('drafts')) {
                 db.createObjectStore('drafts', { keyPath: 'draftKey' });
             }
+            if (!db.objectStoreNames.contains('session')) {
+                db.createObjectStore('session', { keyPath: 'sessionKey' });
+            }
         };
 
         request.onsuccess = (event) => resolve(event.target.result);
@@ -61,24 +68,31 @@ export function openDB() {
 // ============================================================================
 // 4. SECURE TRANSACTION UTILITIES (DATA AT REST ENCRYPTION)
 // ============================================================================
+/**
+ * Encrypts mortgage appraisal payload data using AES-GCM before caching into IndexedDB.
+ * @param {string} storeName - Target table name.
+ * @param {Object} envelopeData - Object containing the payload and initial metadata states.
+ */
 export async function addRecord(storeName, envelopeData) {
     const db = await openDB();
 
     try {
         const key = await getCryptoKey();
-        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const iv = window.crypto.getRandomValues(new Uint8Array(12)); // Generate secure unique IV initialization vector
         const enc = new TextEncoder();
 
+        // Stringify and encrypt raw technical data dictionary values (text, maps, base64 drawings)
         const encryptedBuffer = await window.crypto.subtle.encrypt(
             { name: 'AES-GCM', iv: iv },
             key,
             enc.encode(JSON.stringify(envelopeData.payload))
         );
 
+        // Pack encrypted parameters safely into storage structures matching corporate security logs policies
         const securePackage = {
             timestamp: envelopeData.timestamp || Date.now(),
             status: envelopeData.status || 'pending',
-            iv: Array.from(iv),
+            iv: Array.from(iv), // Convert to standard array structure to allow serialization
             ciphertext: Array.from(new Uint8Array(encryptedBuffer))
         };
 
@@ -95,6 +109,11 @@ export async function addRecord(storeName, envelopeData) {
     }
 }
 
+/**
+ * Retrieves records from database and automatically decrypts them back into transparent JSON objects.
+ * @param {string} storeName - Target table name.
+ * @returns {Promise<Array>} Decrypted records array ready for application consumption.
+ */
 export async function getAllRecords(storeName) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -110,6 +129,7 @@ export async function getAllRecords(storeName) {
 
                 const decryptedRows = [];
                 for (const row of rawRows) {
+                    // Fallback check: If row lacks encrypted properties parameters, treat as unencrypted legacy row
                     if (!row.ciphertext) {
                         decryptedRows.push(row);
                         continue;
@@ -141,6 +161,9 @@ export async function getAllRecords(storeName) {
     });
 }
 
+/**
+ * Wipes out a structural data record row matching primary incremented IDs pointers keys.
+ */
 export async function deleteRecord(storeName, key) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -180,6 +203,11 @@ export async function getCachedDropdownOptions(storeKey) {
 // ============================================================================
 // 6. IN-PROGRESS FORM DRAFTS (real autosave, not just a "Save draft" toast)
 // ============================================================================
+/**
+ * Persists an in-progress form's field values, overwriting any previous draft
+ * under the same key. Not encrypted like a submitted record — this is transient,
+ * user-editable data, not a finalized appraisal payload.
+ */
 export async function saveDraft(draftKey, fieldsSnapshot) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -208,6 +236,49 @@ export async function deleteDraft(draftKey) {
         const transaction = db.transaction('drafts', 'readwrite');
         const store = transaction.objectStore('drafts');
         const request = store.delete(draftKey);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// ============================================================================
+// 7. AUTH SESSION (not localStorage — same reasoning as elsewhere in this file:
+// a token in localStorage is readable by any injected script with no expiry
+// enforcement; IndexedDB isn't safe from XSS either, but keeps the session
+// alongside everything else this app already treats as sensitive, and lets a
+// service worker read it directly for background-sync scenarios later.)
+// ============================================================================
+const SESSION_KEY = 'current';
+
+export async function saveSession(session) {
+    // session: { token, expiresAt, refreshToken? }
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('session', 'readwrite');
+        const store = transaction.objectStore('session');
+        const request = store.put({ sessionKey: SESSION_KEY, ...session });
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+export async function getSession() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('session', 'readonly');
+        const store = transaction.objectStore('session');
+        const request = store.get(SESSION_KEY);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+export async function clearSession() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('session', 'readwrite');
+        const store = transaction.objectStore('session');
+        const request = store.delete(SESSION_KEY);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
     });
