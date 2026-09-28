@@ -182,6 +182,7 @@ import CanvasDraw from '@/components/inputs/canvasdraw/CanvasDraw.vue'
 import CollapsedInfoCard from '@/components/CollapsedInfoCard.vue'
 import ReadOnlyField from '@/components/inputs/ReadOnlyField.vue'
 import CompassInput from '@/components/inputs/CompassInput.vue'
+import AttachmentPicker from '@/components/inputs/AttachmentPicker.vue'
 
 const emit = defineEmits(['onSubmit', 'onDraftChange'])
 const props = defineProps({ formConfig: { type: Object, default: () => ({ fields: [] }) } })
@@ -195,7 +196,8 @@ const componentMaps = {
   canvas: CanvasDraw, 
   map: MapDisplay, 
   select: SelectInput, 
-  camera: CameraCapture 
+  camera: CameraCapture,
+  attachment: AttachmentPicker
 }
 
 // A field's `type` says what widget it WOULD be; `computed: true` overrides that with
