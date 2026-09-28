@@ -47,3 +47,20 @@ export function transformSubmissionHistoryLogs(rawLogRecordsArray) {
         }
     }).sort((a, b) => b.timestamp - a.timestamp)
 }
+
+// ============================================================================
+// 3. AUTH SESSION RESPONSE CONVERTER
+// ============================================================================
+/**
+ * Maps the raw login endpoint response into exactly what auth.setSession()
+ * expects. If the backend ever renames a field, or changes expiresAt's units,
+ * this is the one place that changes — not Login.vue, not the auth store.
+ * @param {Object} rawLoginResponse - Parsed JSON body from POST auth/login.
+ * @returns {{token: string, expiresAt: number|undefined}}
+ */
+export function mapLoginResponseToSession(rawLoginResponse) {
+    return {
+        token: rawLoginResponse.token,
+        expiresAt: rawLoginResponse.expiresAt
+    }
+}

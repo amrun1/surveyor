@@ -41,6 +41,8 @@ import { useRouter, useRoute } from 'vue-router'
 import TextInput from '@/components/inputs/TextInput.vue'
 import { useAuthStore } from '@/store/auth.js'
 import { useSync } from '@/composables/useSync.js'
+import { login } from '@/services/authService.js'
+import { mapLoginResponseToSession } from '@/domain/mappers.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -89,12 +91,7 @@ const handleSubmit = async () => {
 
   isSubmitting.value = true
   try {
-    const baseUrl = `${import.meta.env.BASE_URL}api/`
-    const response = await fetch(`${baseUrl}auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: username.value.trim(), password: password.value })
-    })
+    const response = await login(username.value.trim(), password.value)
 
     if (response.status === 401 || response.status === 403) {
       formError.value = 'Incorrect username or password.'
@@ -106,10 +103,7 @@ const handleSubmit = async () => {
     }
 
     const data = await response.json()
-    // Expected shape: { token, expiresAt? }. If your backend doesn't send
-    // expiresAt explicitly, auth.setSession() falls back to decoding the JWT's
-    // own exp claim.
-    await auth.setSession({ token: data.token, expiresAt: data.expiresAt })
+    await auth.setSession(mapLoginResponseToSession(data))
 
     const resolvedCount = await resolvePendingAuthRecords()
     if (resolvedCount > 0) {

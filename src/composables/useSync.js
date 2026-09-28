@@ -1,22 +1,13 @@
 import { ref } from 'vue'
 import { getAllRecords, addRecord, deleteRecord } from '@/database/db.js'
+import * as syncService from '@/services/syncService.js'
 
 const isOnline = ref(navigator.onLine)
 const isSyncing = ref(false)
 
 export function useSync() {
 
-    const checkTomcatHeartbeat = async () => {
-        if (!navigator.onLine) return false
-        const baseUrl = `${import.meta.env.BASE_URL}api/`
-        try {
-            // 0-byte network footprint verification header call protects cellular usage
-            const pingCheck = await fetch(`${baseUrl}lookup/facility-types`, { method: 'HEAD', cache: 'no-store' })
-            return pingCheck.ok
-        } catch {
-            return false
-        }
-    }
+    const checkTomcatHeartbeat = async () => syncService.checkHeartbeat()
 
     const flushPendingSyncQueue = async () => {
         if (isSyncing.value) return
@@ -30,20 +21,23 @@ export function useSync() {
             if (targetFlushes.length === 0) return
 
             isSyncing.value = true
-            const baseUrl = `${import.meta.env.BASE_URL}api/`
 
             for (const item of targetFlushes) {
                 try {
-                    const response = await fetch(`${baseUrl}survey/submit`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(item.payload)
-                    })
+                    const response = await syncService.submitSurvey(item.payload)
 
                     if (response.ok) {
                         await deleteRecord('syncQueue', item.id)
-                        item.status = 'synced'
-                        await addRecord('syncQueue', { ...item })
+                        await addRecord('syncQueue', { ...item, status: 'synced' })
+                    } else if (response.status === 401) {
+                        // api.js already cleared the (now known-bad) session. Re-queue
+                        // this item as pending_auth rather than leaving it plain
+                        // 'pending' — a plain pending item would just keep failing the
+                        // same way on every future reconnect until an explicit login
+                        // happens, same as an offline-queued submission.
+                        await deleteRecord('syncQueue', item.id)
+                        await addRecord('syncQueue', { ...item, status: 'pending_auth' })
+                        break
                     }
                 } catch {
                     console.warn('Tomcat pipeline drop identified during batch transmission loop. Pausing.')
