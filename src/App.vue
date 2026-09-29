@@ -1,5 +1,5 @@
 <script setup>
-import { ref, provide, watch } from 'vue'
+import { ref, provide, onUnmounted, onMounted } from 'vue'
 import { RouterView, useRouter, useRoute } from 'vue-router'
 import { useUiStore } from '@/store/ui.js'
 import { useAuthStore } from '@/store/auth.js'
@@ -8,11 +8,26 @@ import Header from './components/Header.vue'
 import Menu from './components/Menu.vue'
 import AppToast from '@/components/Toast.vue'
 
+import { runInitialServerSync } from '@/services/bootstrap.js'
+import { useSync } from '@/composables/useSync.js'
+
+const { flushPendingSyncQueue, setupSyncListeners, cleanupSyncListeners } = useSync()
+
 const ui = useUiStore()
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const globalToastComponentRef = ref(null)
+
+onMounted(() => {
+  runInitialServerSync()
+  setupSyncListeners()
+  flushPendingSyncQueue()
+})
+
+onUnmounted(() => {
+  cleanupSyncListeners()
+})
 
 provide('toast', {
   success: (title, msg) => globalToastComponentRef.value?.show(title, msg, 'success'),
