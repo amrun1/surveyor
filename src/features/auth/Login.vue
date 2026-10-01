@@ -1,7 +1,7 @@
 <!-- src/features/auth/Login.vue -->
 <template>
   <div class="min-h-screen flex flex-col relative overflow-hidden bg-cover bg-no-repeat"
-    :style="{ backgroundColor: '#1e3a8a', backgroundImage: `url('${bgImageUrl}')`, backgroundPosition: 'center center' }">
+    :style="{ backgroundColor: '#1e3a8a', backgroundImage: `url('${bgImageUrl}')`, backgroundPosition: 'right center' }">
     <!-- The photo's objects (houses, calculator) sit toward its left; background-position
          keeps the emptier blue area on the right under the card, matching the reference
          screenshot. On narrow/mobile widths the card is centered instead (see <main>
@@ -32,11 +32,11 @@
         <form @submit.prevent="handleSubmit" class="space-y-5">
           <div>
             <label class="block text-white/90 text-sm font-medium mb-1.5">User ID</label>
-            <input v-model="username" type="text" placeholder="Key in User ID" autocomplete="username"
-              :class="fieldErrors.username ? 'border-red-400' : 'border-white/30 focus:border-white'"
+            <input v-model="userId" type="text" placeholder="Key in User ID" autocomplete="username"
+              :class="fieldErrors.userId ? 'border-red-400' : 'border-white/30 focus:border-white'"
               class="w-full bg-transparent border-0 border-b pb-2 text-white placeholder-white/40 text-base focus:outline-none transition-colors" />
-            <span v-if="fieldErrors.username" class="text-red-300 text-xs font-medium mt-1 block">{{
-              fieldErrors.username }}</span>
+            <span v-if="fieldErrors.userId" class="text-red-300 text-xs font-medium mt-1 block">{{
+              fieldErrors.userId }}</span>
           </div>
 
           <div>
@@ -83,10 +83,10 @@ const { resolvePendingAuthRecords } = useSync()
 // Needed because this app deploys under a subpath (base: '/surveyor/' in
 // vite.config.js) — a hardcoded '/login-bg.jpg' would resolve to the domain
 // root instead of where the file actually gets served from.
-const bgImageUrl = `${import.meta.env.BASE_URL}login-bg.png`
+const bgImageUrl = `${import.meta.env.BASE_URL}login-bg.jpg`
 const logoUrl = `${import.meta.env.BASE_URL}permata-logo.svg`
 
-const username = ref('')
+const userId = ref('')
 const password = ref('')
 const isSubmitting = ref(false)
 const formError = ref('')
@@ -109,7 +109,7 @@ onUnmounted(() => {
 
 const validate = () => {
   fieldErrors.value = {}
-  if (!username.value.trim()) fieldErrors.value.username = 'Required'
+  if (!userId.value.trim()) fieldErrors.value.userId = 'Required'
   if (!password.value.trim()) fieldErrors.value.password = 'Required'
   return Object.keys(fieldErrors.value).length === 0
 }
@@ -127,7 +127,7 @@ const handleSubmit = async () => {
 
   isSubmitting.value = true
   try {
-    const response = await login(username.value.trim(), password.value)
+    const response = await login(userId.value.trim(), password.value)
 
     if (response.status === 401 || response.status === 403) {
       formError.value = 'Incorrect username or password.'
@@ -140,6 +140,7 @@ const handleSubmit = async () => {
 
     const data = await response.json()
     await auth.setSession(mapLoginResponseToSession(data))
+    console.log('Login response:', auth)
 
     const resolvedCount = await resolvePendingAuthRecords()
     if (resolvedCount > 0) {

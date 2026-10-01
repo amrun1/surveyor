@@ -1,6 +1,19 @@
 import { useAuthStore } from '@/store/auth.js'
 
-const BASE_URL = `${import.meta.env.BASE_URL}api/`
+// Frontend (/surveyor) and backend both deploy as separate WARs on the SAME
+// Tomcat instance, at different context-paths — same scheme+host+port, so
+// they're same-origin in production by definition. No proxy/rewrite is needed
+// there at all; a plain relative path like '/appraisal-api/auth/login' just
+// works, served directly by Tomcat.
+//
+// The one place a proxy still matters is LOCAL DEV: Vite's dev server and the
+// backend's local dev instance run on different ports, which genuinely are
+// different origins until deployed. vite.config.js's dev-only proxy bridges
+// that gap using this exact same path, so one code path works in both places —
+// only the *target it forwards to* differs between environments, not this URL.
+//
+// TODO: replace with the backend's real Tomcat context-path once confirmed.
+const BASE_URL = '/appraisal-api'
 
 export async function apiFetch(path, options = {}) {
     const auth = useAuthStore()

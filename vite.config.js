@@ -8,6 +8,22 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Bridges the one gap that's real only in local dev: Vite's dev server and
+  // the backend's local instance run on different ports (different origins)
+  // until deployed. In production, both apps live on the same Tomcat instance
+  // at different context-paths — same-origin by definition — so this proxy
+  // has no production equivalent to keep in sync; it exists purely for local
+  // development convenience.
+  server: {
+    port: 5173,
+    proxy: {
+      '/appraisal-api': {
+        target: 'http://localhost:3000', // wherever the backend runs locally in dev
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/appraisal-api/, '')
+      }
+    }
+  },
   base: '/surveyor/',
   plugins: [
     tailwindcss(),

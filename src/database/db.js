@@ -252,7 +252,9 @@ const SESSION_KEY = 'current';
 
 export async function saveSession(session) {
     // session: { token, expiresAt, refreshToken? }
+    console.log('Saving session to IndexedDB:', session)
     const db = await openDB();
+    console.log('DB opened for session save:', db)
     return new Promise((resolve, reject) => {
         const transaction = db.transaction('session', 'readwrite');
         const store = transaction.objectStore('session');

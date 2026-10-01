@@ -53,14 +53,20 @@ export function transformSubmissionHistoryLogs(rawLogRecordsArray) {
 // ============================================================================
 /**
  * Maps the raw login endpoint response into exactly what auth.setSession()
- * expects. If the backend ever renames a field, or changes expiresAt's units,
- * this is the one place that changes — not Login.vue, not the auth store.
- * @param {Object} rawLoginResponse - Parsed JSON body from POST auth/login.
- * @returns {{token: string, expiresAt: number|undefined}}
+ * expects. Confirmed against appraisal-backend's actual response shape —
+ * every response is wrapped in ApiResponseTemplate ({status, message, object}),
+ * and the JWT itself sits at object.token, not the response body's top level.
+ * No expiresAt is ever sent back (JwtAuthenticationResponse has no such
+ * field) — auth.setSession() already falls back to decoding the JWT's own
+ * exp claim when this is undefined, so that's left unset here on purpose.
+ * @param {Object} rawLoginResponse - Parsed JSON body from POST /auth/login.
+ * @returns {{token: string, expiresAt: undefined, roles: string[]}}
  */
 export function mapLoginResponseToSession(rawLoginResponse) {
+    const data = rawLoginResponse.object || {}
     return {
-        token: rawLoginResponse.token,
-        expiresAt: rawLoginResponse.expiresAt
+        token: data.token,
+        expiresAt: undefined,
+        roles: data.roles || []
     }
 }

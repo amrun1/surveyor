@@ -73,7 +73,7 @@ window.addEventListener('online', () => {
       <div class="flex flex-1 pt-16 h-screen overflow-hidden">
         <Menu />
 
-        <div v-if="ui.isMenuOpen" @click="ui.closeMenu" class="fixed inset-0 bg-slate-900/40 z-30 lg:hidden"></div>
+        <div v-if="ui.isMenuOpen" @click="ui.closeMenu" class="fixed inset-0 bg-slate-900/40 z-30 md:hidden"></div>
 
         <main class="flex-1 bg-sky overflow-y-auto p-4 md:p-8">
           <div class="max-w-5xl">

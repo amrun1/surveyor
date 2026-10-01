@@ -17,6 +17,7 @@ function decodeJwtExpiry(token) {
 export const useAuthStore = defineStore('auth', () => {
     const token = ref(null)
     const expiresAt = ref(null) // epoch ms
+    const roles = ref([]) // confirmed returned by /auth/login (JwtAuthenticationResponse.roles)
     const isHydrated = ref(false) // true once we've checked IndexedDB for a prior session
 
     // Set by the router guard specifically for the "offline + invalid token"
@@ -42,16 +43,20 @@ export const useAuthStore = defineStore('auth', () => {
 
     // `expiresAt` takes precedence when the server sends one explicitly; otherwise
     // fall back to decoding the JWT itself.
-    const setSession = async ({ token: newToken, expiresAt: serverExpiresAt }) => {
+    const setSession = async ({ token: newToken, expiresAt: serverExpiresAt, roles: newRoles }) => {
         token.value = newToken
         expiresAt.value = serverExpiresAt ?? decodeJwtExpiry(newToken)
+        roles.value = newRoles || []
         needsReauthWhenOnline.value = false
-        await saveSession({ token: token.value, expiresAt: expiresAt.value })
+        console.log('Auth session set:', { token: token.value, expiresAt: expiresAt.value, roles: roles.value })
+        await saveSession({ token: token.value, expiresAt: expiresAt.value, roles: roles.value })
+        console.log('Auth session saved to IndexedDB.')
     }
 
     const clearAuth = async () => {
         token.value = null
         expiresAt.value = null
+        roles.value = []
         await clearSession()
     }
 
@@ -63,12 +68,13 @@ export const useAuthStore = defineStore('auth', () => {
         if (session) {
             token.value = session.token
             expiresAt.value = session.expiresAt
+            roles.value = session.roles || []
         }
         isHydrated.value = true
     }
 
     return {
-        token, expiresAt, isHydrated, isTokenValid, needsReauthWhenOnline,
+        token, expiresAt, roles, isHydrated, isTokenValid, needsReauthWhenOnline,
         setSession, clearAuth, hydrate,
         registerFlushHandler, unregisterFlushHandler, flushPendingSaves
     }
