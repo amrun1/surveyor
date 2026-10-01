@@ -55,9 +55,6 @@ window.addEventListener('online', () => {
     '--color-background': APP_COLORS.background
   }" class="h-screen overflow-hidden flex flex-col antialiased">
 
-    <!-- Fullscreen routes (e.g. /login) render with none of the app shell — no
-         Header, no sidebar Menu, no reauth banner (redundant if you're already
-         looking at the sign-in screen). Toasts still work everywhere. -->
     <template v-if="route.meta.layout === 'fullscreen'">
       <RouterView />
     </template>

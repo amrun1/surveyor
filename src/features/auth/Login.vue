@@ -1,14 +1,6 @@
-<!-- src/features/auth/Login.vue -->
 <template>
   <div class="min-h-screen flex flex-col relative overflow-hidden bg-cover bg-no-repeat"
     :style="{ backgroundColor: '#1e3a8a', backgroundImage: `url('${bgImageUrl}')`, backgroundPosition: 'right center' }">
-    <!-- The photo's objects (houses, calculator) sit toward its left; background-position
-         keeps the emptier blue area on the right under the card, matching the reference
-         screenshot. On narrow/mobile widths the card is centered instead (see <main>
-         below), so it may partially sit over the objects — acceptable since the image
-         itself is a wide banner not designed for portrait crops. -->
-
-    <!-- Darkens the image slightly for text contrast without a hard color swap. -->
     <div class="absolute inset-0 bg-black/10 pointer-events-none"></div>
 
     <header class="flex items-center px-5 pt-6 pb-2 lg:px-10 lg:pt-8">
@@ -80,9 +72,6 @@ const auth = useAuthStore()
 const toast = inject('toast')
 const { resolvePendingAuthRecords } = useSync()
 
-// Needed because this app deploys under a subpath (base: '/surveyor/' in
-// vite.config.js) — a hardcoded '/login-bg.jpg' would resolve to the domain
-// root instead of where the file actually gets served from.
 const bgImageUrl = `${import.meta.env.BASE_URL}login-bg.jpg`
 const logoUrl = `${import.meta.env.BASE_URL}permata-logo.svg`
 
@@ -93,10 +82,6 @@ const formError = ref('')
 const fieldErrors = ref({})
 const isOnline = ref(navigator.onLine)
 
-// navigator.onLine can be wrong in both directions (e.g. connected to wifi with
-// no real internet), so it gates the UI (disables the button, shows the banner)
-// but the actual submit handler below still independently distinguishes a network
-// failure from a real 401 — this isn't the only line of defense.
 const updateOnlineStatus = () => { isOnline.value = navigator.onLine }
 onMounted(() => {
   window.addEventListener('online', updateOnlineStatus)
@@ -118,8 +103,6 @@ const handleSubmit = async () => {
   formError.value = ''
   if (!validate()) return
 
-  // Belt-and-suspenders: even though the button is disabled while offline,
-  // don't let a request slip through on a stale isOnline read.
   if (!navigator.onLine) {
     formError.value = "You're offline — connect to the internet to sign in."
     return

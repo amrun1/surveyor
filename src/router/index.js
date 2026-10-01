@@ -5,7 +5,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/login', name: 'login', component: () => import('@/features/auth/Login.vue'), meta: { layout: 'fullscreen' } },
-    { path: '/', name: 'tasklist', component: () => import('@/features/tasklist/tasklist.vue') },
+    { path: '/', name: 'tasklist', component: () => import('@/features/task/Tasklist.vue') },
     { path: '/survey/inquiry', name: 'inquiry', component: () => import('@/features/survey/Inquiry.vue') },
     { path: '/survey/form', name: 'form', component: () => import('@/features/survey/SurveyForm.vue') }
   ]
