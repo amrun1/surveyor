@@ -151,9 +151,10 @@ const handleSubmit = async () => {
     router.replace(redirectTo)
 
   } catch (err) {
-    // A thrown fetch (TypeError: Failed to fetch, or similar) means the request
-    // never reached the server at all — that's a connectivity problem, not a
-    // credentials problem, and should never be shown as "wrong password."
+    console.error('Login failed unexpectedly:', err)
+    formError.value = err instanceof TypeError
+     ? "Couldn't reach the server. Check your connection and try again."
+     : 'Something unexpected happened signing in. Check the console for details.'
     formError.value = "Couldn't reach the server. Check your connection and try again."
   } finally {
     isSubmitting.value = false

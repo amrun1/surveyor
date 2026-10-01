@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, toRaw } from 'vue'
 import { defineStore } from 'pinia'
 import { saveSession, getSession, clearSession } from '@/database/db.js'
 
@@ -49,7 +49,7 @@ export const useAuthStore = defineStore('auth', () => {
         roles.value = newRoles || []
         needsReauthWhenOnline.value = false
         console.log('Auth session set:', { token: token.value, expiresAt: expiresAt.value, roles: roles.value })
-        await saveSession({ token: token.value, expiresAt: expiresAt.value, roles: roles.value })
+        await saveSession({ token: token.value, expiresAt: expiresAt.value, roles: toRaw(roles.value) })
         console.log('Auth session saved to IndexedDB.')
     }
 

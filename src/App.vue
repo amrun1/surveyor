@@ -53,7 +53,7 @@ window.addEventListener('online', () => {
     '--color-accent': APP_COLORS.accent,
     '--color-danger': APP_COLORS.danger,
     '--color-background': APP_COLORS.background
-  }" class="min-h-screen flex flex-col antialiased">
+  }" class="h-screen overflow-hidden flex flex-col antialiased">
 
     <!-- Fullscreen routes (e.g. /login) render with none of the app shell — no
          Header, no sidebar Menu, no reauth banner (redundant if you're already
@@ -70,7 +70,7 @@ window.addEventListener('online', () => {
 
       <Header />
 
-      <div class="flex flex-1 pt-16 h-screen overflow-hidden">
+      <div class="flex flex-1 pt-16 overflow-hidden">
         <Menu />
 
         <div v-if="ui.isMenuOpen" @click="ui.closeMenu" class="fixed inset-0 bg-slate-900/40 z-30 md:hidden"></div>

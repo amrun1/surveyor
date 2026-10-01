@@ -61,10 +61,10 @@ onUnmounted(() => {
 
 <template>
     <aside :class="[
-        ui.isMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+        ui.isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         isCompact ? 'w-[76px]' : 'w-64'
     ]"
-        class="fixed inset-y-0 left-0 pt-16 md:pt-3 bg-white border-r border-slate-200/80 z-50 transition-all duration-300 ease-in-out flex flex-col md:static select-none h-screen overflow-hidden shrink-0">
+        class="fixed inset-y-0 left-0 pt-16 lg:pt-3 bg-white border-r border-slate-200/80 z-50 transition-all duration-300 ease-in-out flex flex-col lg:static select-none overflow-hidden shrink-0">
         <nav class="flex-1 p-3 space-y-1.5 overflow-y-auto overflow-x-hidden custom-scrollbar">
 
             <RouterLink v-for="item in menuItems" :key="item.routeName" :to="{ name: item.routeName }"
@@ -78,9 +78,7 @@ onUnmounted(() => {
 
         </nav>
 
-        <!-- Collapse toggle: desktop tier only. Tablet's compactness is forced by
-             width, not a choice, so it gets no control for this at all. -->
-        <button v-if="isLgUp" @click="toggleCollapsed" type="button"
+        <button @click="toggleCollapsed" type="button"
             :aria-label="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
             class="hidden lg:flex items-center justify-center mx-3 mb-3 w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors shrink-0 self-start">
             <svg :class="{ 'rotate-180': isCollapsed }" class="w-4 h-4 transition-transform duration-200" fill="none"

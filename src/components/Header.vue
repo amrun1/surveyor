@@ -10,7 +10,7 @@ const ui = useUiStore()
             <span class="text-xl  font-bold tracking-tight text-white">Surveyor</span>
         </div>
         <button @click="ui.toggleMenu"
-            class="md:hidden p-2 rounded-lg text-white hover:bg-blue-900/60 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
+            class="lg:hidden p-2 rounded-lg text-white hover:bg-blue-900/60 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
             type="button">
             <svg v-if="!ui.isMenuOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
