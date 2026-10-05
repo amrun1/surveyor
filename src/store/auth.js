@@ -7,17 +7,29 @@ import { saveSession, getSession, clearSession } from '@/database/db.js'
 // a proactive refresh / show an expiry warning without a round-trip just to ask.
 function decodeJwtExpiry(token) {
     try {
-        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+        // JWT segments are base64url with padding stripped; atob wants standard,
+        // padded base64.
+        const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+        const payload = JSON.parse(atob(b64 + '='.repeat((4 - b64.length % 4) % 4)))
         return payload.exp ? payload.exp * 1000 : null // exp is seconds; JS wants ms
-    } catch {
-        return null // not a JWT, or unreadable — caller should fall back to a server-supplied expiresAt
+    } catch (err) {
+        console.warn('Could not decode JWT exp claim:', err)
+        return null // not a JWT, or unreadable — caller falls back
     }
 }
+
+// Confirmed backend token lifetime (app.jwt.expiration-ms=86400000). Only used
+// when the exp claim can't be read — the server still validates every request.
+const FALLBACK_TOKEN_LIFETIME_MS = 24 * 60 * 60 * 1000
 
 export const useAuthStore = defineStore('auth', () => {
     const token = ref(null)
     const expiresAt = ref(null) // epoch ms
     const roles = ref([]) // confirmed returned by /auth/login (JwtAuthenticationResponse.roles)
+    const userId = ref(null) // confirmed returned by /auth/login (JwtAuthenticationResponse.userId)
+    // For accounts with more than one role, the one currently selected in the
+    // Header. Always one of `roles`; defaults to roles[0].
+    const activeRole = ref(null)
     const isHydrated = ref(false) // true once we've checked IndexedDB for a prior session
 
     // Set by the router guard specifically for the "offline + invalid token"
@@ -43,20 +55,43 @@ export const useAuthStore = defineStore('auth', () => {
 
     // `expiresAt` takes precedence when the server sends one explicitly; otherwise
     // fall back to decoding the JWT itself.
-    const setSession = async ({ token: newToken, expiresAt: serverExpiresAt, roles: newRoles }) => {
+    // Arrays must go through toRaw() — IndexedDB can't structured-clone a reactive Proxy.
+    const persistSession = () => saveSession({
+        token: token.value,
+        expiresAt: expiresAt.value,
+        roles: toRaw(roles.value),
+        userId: userId.value,
+        activeRole: activeRole.value
+    })
+
+    const setSession = async ({ token: newToken, expiresAt: serverExpiresAt, roles: newRoles, userId: newUserId }) => {
         token.value = newToken
         expiresAt.value = serverExpiresAt ?? decodeJwtExpiry(newToken)
+        if (newToken && !expiresAt.value) {
+            console.warn('No usable exp claim on token — assuming the backend default 24h lifetime.')
+            expiresAt.value = Date.now() + FALLBACK_TOKEN_LIFETIME_MS
+        }
         roles.value = newRoles || []
+        userId.value = newUserId ?? null
+        activeRole.value = roles.value[0] ?? null
         needsReauthWhenOnline.value = false
         console.log('Auth session set:', { token: token.value, expiresAt: expiresAt.value, roles: roles.value })
-        await saveSession({ token: token.value, expiresAt: expiresAt.value, roles: toRaw(roles.value) })
+        await persistSession()
         console.log('Auth session saved to IndexedDB.')
+    }
+
+    const setActiveRole = async (role) => {
+        if (!roles.value.includes(role) || role === activeRole.value) return
+        activeRole.value = role
+        await persistSession()
     }
 
     const clearAuth = async () => {
         token.value = null
         expiresAt.value = null
         roles.value = []
+        userId.value = null
+        activeRole.value = null
         await clearSession()
     }
 
@@ -69,13 +104,16 @@ export const useAuthStore = defineStore('auth', () => {
             token.value = session.token
             expiresAt.value = session.expiresAt
             roles.value = session.roles || []
+            userId.value = session.userId ?? null
+            // Sessions persisted before activeRole existed won't have one.
+            activeRole.value = roles.value.includes(session.activeRole) ? session.activeRole : (roles.value[0] ?? null)
         }
         isHydrated.value = true
     }
 
     return {
-        token, expiresAt, roles, isHydrated, isTokenValid, needsReauthWhenOnline,
-        setSession, clearAuth, hydrate,
+        token, expiresAt, roles, userId, activeRole, isHydrated, isTokenValid, needsReauthWhenOnline,
+        setSession, setActiveRole, clearAuth, hydrate,
         registerFlushHandler, unregisterFlushHandler, flushPendingSaves
     }
 })

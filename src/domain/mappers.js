@@ -65,8 +65,9 @@ export function transformSubmissionHistoryLogs(rawLogRecordsArray) {
 export function mapLoginResponseToSession(rawLoginResponse) {
     const data = rawLoginResponse.object || {}
     return {
-        token: data.token,
+        token: typeof data.token === 'string' ? data.token.replace(/^Bearer\s+/i, '') : data.token,
         expiresAt: undefined,
-        roles: data.roles || []
+        roles: data.roles || [],
+        userId: data.userId ?? null
     }
 }

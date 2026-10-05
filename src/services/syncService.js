@@ -10,7 +10,9 @@ import { apiFetch } from './api.js'
 export async function checkHeartbeat() {
     if (!navigator.onLine) return false
     try {
-        await apiFetch('/', { method: 'GET', cache: 'no-store' })
+        // skipAuth: a reachability ping has no business carrying the token, and a
+        // 401 from the bare origin must never be mistaken for "session died".
+        await apiFetch('/', { method: 'GET', cache: 'no-store', skipAuth: true })
         return true
     } catch {
         return false

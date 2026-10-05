@@ -21,41 +21,35 @@ const menuItems = [
 ]
 
 // --- Viewport tier -----------------------------------------------------
-// Tracked in JS (not left as pure CSS breakpoints) because desktop's
-// collapsed state is a user toggle, not something a media query alone can
-// express — isCompact below needs to combine "which tier" with "did they
-// choose to collapse it," so both need to be readable from the same place.
+// Two tiers, one breakpoint (Tailwind's default md: = 768px):
+//   below md → overlay drawer (ui.isMenuOpen), always full labels
+//   md and up → static sidebar; compact or full is purely the user's choice
+// Tracked in JS because isCompact combines "which tier" with "did they choose
+// to collapse it". MD_BREAKPOINT_PX agrees with Tailwind's md: by convention
+// only — if md is ever customized in @theme, update this too.
+const MD_BREAKPOINT_PX = 768
 const isMdUp = ref(false)
-const isLgUp = ref(false)
-let mdQuery, lgQuery
+let mdQuery
 const updateMdUp = (e) => { isMdUp.value = e.matches }
-const updateLgUp = (e) => { isLgUp.value = e.matches }
 
-// --- Desktop collapse (persisted; irrelevant below lg, see isCompact) --
+// --- Collapse (persisted; irrelevant below md, see isCompact) ----------
 const isCollapsed = ref(localStorage.getItem('sidebarCollapsed') === 'true')
 const toggleCollapsed = () => {
     isCollapsed.value = !isCollapsed.value
     localStorage.setItem('sidebarCollapsed', String(isCollapsed.value))
 }
 
-// True on the tablet tier (forced — no room for the full sidebar there),
-// or on desktop specifically when the person has chosen to collapse it.
-// Never true on phone: opening the overlay drawer there always shows full
-// labels, since phone has no "compact but visible" state to fall back to.
-const isCompact = computed(() => (isMdUp.value && !isLgUp.value) || (isLgUp.value && isCollapsed.value))
+// Never true on phone: the overlay drawer always shows full labels.
+const isCompact = computed(() => isMdUp.value && isCollapsed.value)
 
 onMounted(() => {
-    mdQuery = window.matchMedia('(min-width: 768px)')
-    lgQuery = window.matchMedia('(min-width: 1024px)')
+    mdQuery = window.matchMedia(`(min-width: ${MD_BREAKPOINT_PX}px)`)
     isMdUp.value = mdQuery.matches
-    isLgUp.value = lgQuery.matches
     mdQuery.addEventListener('change', updateMdUp)
-    lgQuery.addEventListener('change', updateLgUp)
 })
 
 onUnmounted(() => {
     mdQuery?.removeEventListener('change', updateMdUp)
-    lgQuery?.removeEventListener('change', updateLgUp)
 })
 </script>
 

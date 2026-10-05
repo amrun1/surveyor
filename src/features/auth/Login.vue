@@ -130,8 +130,9 @@ const handleSubmit = async () => {
       toast?.success('Submissions Resumed', `${resolvedCount} submission(s) saved while signed out are now syncing.`)
     }
 
+    console.log('Session valid before redirect:', auth.isTokenValid, auth.expiresAt)
     const redirectTo = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
-    router.replace(redirectTo)
+    await router.replace(redirectTo)
 
   } catch (err) {
     console.error('Login failed unexpectedly:', err)

@@ -15,9 +15,11 @@ import { useAuthStore } from '@/store/auth.js'
 // TODO: replace with the backend's real Tomcat context-path once confirmed.
 const BASE_URL = '/appraisal-api'
 
-export async function apiFetch(path, options = {}) {
+// `skipAuth: true` sends the request without the bearer token, and a 401 from
+// it is never treated as session invalidation (e.g. the heartbeat ping).
+export async function apiFetch(path, { skipAuth = false, ...options } = {}) {
     const auth = useAuthStore()
-    const hadToken = !!auth.token
+    const hadToken = !skipAuth && !!auth.token
 
     const headers = {
         ...(options.body ? { 'Content-Type': 'application/json' } : {}),
