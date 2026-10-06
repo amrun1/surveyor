@@ -32,6 +32,9 @@
                 </tbody>
             </table>
         </div>
+        <div v-if="$slots.footer" class="px-6 py-3 border-t border-slate-100 bg-slate-50/50">
+            <slot name="footer" />
+        </div>
     </div>
 </template>
 

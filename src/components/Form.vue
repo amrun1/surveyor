@@ -27,6 +27,8 @@
               <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
             {{ tab.title }}
+            <span v-if="isFreeNavigation && !isTabComplete(idx)" class="w-1.5 h-1.5 rounded-full bg-amber-500"
+              title="Ada field wajib yang belum diisi" aria-label="ada field wajib kosong"></span>
           </button>
         </div>
 
@@ -54,9 +56,7 @@
               :disabled="!isTabReachable(idx)"
               :aria-label="`${tab.title}${!isTabReachable(idx) ? ' (locked)' : ''}`"
               :class="[
-                idx < activeTabIdx ? 'bg-teal-600' : '',
-                idx === activeTabIdx ? 'bg-primary' : '', 
-                idx > activeTabIdx ? 'bg-slate-200' : '',
+                mobileSegmentClass(idx),
                 isTabReachable(idx) ? 'cursor-pointer' : 'cursor-not-allowed'
               ]"
               class="flex-1 rounded-full transition-all duration-300 focus:outline-none"
@@ -273,17 +273,34 @@ const toggleSection = (section) => {
   collapsedSections.value[key] = !collapsedSections.value[key]
 }
 
+const isBlankValue = (value) =>
+  !value || (Array.isArray(value) && value.length === 0) || (typeof value === 'string' && value.trim() === '')
+
+// formConfig.navigation:
+//   'sequential' (default) — tabs past the first incomplete one are locked and "Next"
+//                            requires the current tab's required fields.
+//   'free'                 — any tab, any order; required fields are only enforced on submit.
+const isFreeNavigation = computed(() => props.formConfig.navigation === 'free')
+
 // A tab counts as complete once every visible required field inside it has a value.
-// Used to figure out how far ahead someone is allowed to jump.
+// Sequential mode uses it to decide how far ahead someone may jump; free mode only
+// uses it for the "still missing something" indicators.
 const isTabComplete = (idx) => {
   const tab = props.formConfig.tabs?.[idx]
   if (!tab) return true
   return tab.fields.every(fieldName => {
     const field = props.formConfig.fields.find(f => f.name === fieldName)
     if (!field || !field.required || !isFieldVisible(field)) return true
-    const value = field.value
-    return !(!value || (Array.isArray(value) && value.length === 0) || (typeof value === 'string' && value.trim() === ''))
+    return !isBlankValue(field.value)
   })
+}
+
+// Sequential: colored by position (done / current / ahead).
+// Free: colored by completion, since "behind the current tab" no longer means "done".
+const mobileSegmentClass = (idx) => {
+  if (idx === activeTabIdx.value) return 'bg-primary'
+  if (isFreeNavigation.value) return isTabComplete(idx) ? 'bg-teal-600' : 'bg-slate-200'
+  return idx < activeTabIdx.value ? 'bg-teal-600' : 'bg-slate-200'
 }
 
 // The furthest tab reachable right now: every completed tab, plus the first
@@ -298,7 +315,7 @@ const maxReachableTabIdx = computed(() => {
   return tabs.length - 1
 })
 
-const isTabReachable = (idx) => idx <= maxReachableTabIdx.value
+const isTabReachable = (idx) => isFreeNavigation.value || idx <= maxReachableTabIdx.value
 
 const handleTabClick = (idx) => {
   if (!isTabReachable(idx)) {
@@ -344,8 +361,14 @@ const emitDraftChange = (immediate = false) => {
 // dependency — deep traversal would only matter if a field's value were itself a
 // nested object/array, and every input type in this app (text, select, canvas, map,
 // camera) stores a plain string. Deep would just walk primitives for no benefit.
+// Once a submit has failed, errors are kept for the whole form (not just the active
+// tab) so they're still visible when the surveyor navigates to another tab, and each
+// one clears live as it's filled in.
+const hasAttemptedSubmit = ref(false)
+
 watch(() => props.formConfig.fields.map(f => f.value), () => {
-  if (Object.keys(fieldErrors.value).length > 0) validateActiveTabFieldsOnly()
+  if (hasAttemptedSubmit.value) fieldErrors.value = collectRequiredErrors().errors
+  else if (Object.keys(fieldErrors.value).length > 0) validateActiveTabFieldsOnly()
   emitDraftChange()
 })
 
@@ -360,20 +383,20 @@ const validateActiveTabFieldsOnly = () => {
     const field = props.formConfig.fields.find(f => f.name === fieldName)
     if (!field || !isFieldVisible(field)) continue
 
-    if (field.required) {
-      const value = field.value
-      const isBlank = !value || (Array.isArray(value) && value.length === 0) || (typeof value === 'string' && value.trim() === '')
-      
-      if (isBlank) {
-        fieldErrors.value[field.name] = 'Enter a value first' 
-        isCurrentStepValid = false
-      }
+    if (field.required && isBlankValue(field.value)) {
+      fieldErrors.value[field.name] = 'Enter a value first'
+      isCurrentStepValid = false
     }
   }
   return isCurrentStepValid
 }
 
 const handleNavigateForwardStep = () => {
+  if (isFreeNavigation.value) {
+    activeTabIdx.value++
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
   if (validateActiveTabFieldsOnly()) {
     activeTabIdx.value++
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -385,7 +408,7 @@ const handleNavigateForwardStep = () => {
 
 const handleNavigateBackwardsStep = () => {
   if (activeTabIdx.value > 0) {
-    fieldErrors.value = {} 
+    if (!hasAttemptedSubmit.value) fieldErrors.value = {}
     activeTabIdx.value--
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -396,38 +419,41 @@ const handleSaveDraftShortcut = () => {
   toast.success('Draft Saved', 'Your assessment progress has been safely cached locally.')
 }
 
-const validateWholeFormOnSubmit = () => {
-  fieldErrors.value = {}
-  let isValid = true
+// Pure: every visible required field that's blank, plus the first tab holding one.
+const collectRequiredErrors = () => {
+  const errors = {}
   let firstErrorTabIdx = null
 
   for (const field of props.formConfig.fields) {
-    if (!field.name || !isFieldVisible(field)) continue
-    const value = field.value
+    if (!field.name || !field.required || !isFieldVisible(field)) continue
+    if (!isBlankValue(field.value)) continue
 
-    if (field.required) {
-      const isBlank = !value || (Array.isArray(value) && value.length === 0) || (typeof value === 'string' && value.trim() === '')
-      if (isBlank) {
-        fieldErrors.value[field.name] = 'Enter a value first'
-        isValid = false
-        
-        if (firstErrorTabIdx === null && props.formConfig.tabs) {
-          firstErrorTabIdx = props.formConfig.tabs.findIndex(t => t.fields.includes(field.name))
-        }
-      }
+    errors[field.name] = 'Enter a value first'
+    if (firstErrorTabIdx === null && props.formConfig.tabs) {
+      const idx = props.formConfig.tabs.findIndex(t => t.fields.includes(field.name))
+      if (idx !== -1) firstErrorTabIdx = idx
     }
   }
-
-  if (firstErrorTabIdx !== null && firstErrorTabIdx !== -1) {
-    activeTabIdx.value = firstErrorTabIdx
-  }
-
-  return isValid
+  return { errors, firstErrorTabIdx }
 }
 
+const stripTabNumber = (title) => title.replace(/^\d+\.\s*/, '')
+
 const handleSubmit = () => {
-  if (!validateWholeFormOnSubmit()) {
-    toast.error('Submission Blocked', 'Incomplete compliance indicators found on earlier steps.')
+  hasAttemptedSubmit.value = true
+  const { errors, firstErrorTabIdx } = collectRequiredErrors()
+  fieldErrors.value = errors
+
+  const errorCount = Object.keys(errors).length
+  if (errorCount > 0) {
+    const tabsWithErrors = (props.formConfig.tabs || [])
+      .filter(tab => tab.fields.some(name => errors[name]))
+      .map(tab => stripTabNumber(tab.title))
+    toast.error(
+      'Submission Blocked',
+      `${errorCount} field wajib belum diisi${tabsWithErrors.length ? ': ' + tabsWithErrors.join(', ') : ''}`
+    )
+    if (firstErrorTabIdx !== null) activeTabIdx.value = firstErrorTabIdx
     scrollToFirstError()
     return
   }

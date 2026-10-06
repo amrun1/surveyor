@@ -7,7 +7,8 @@ const router = createRouter({
     { path: '/login', name: 'login', component: () => import('@/features/auth/Login.vue'), meta: { layout: 'fullscreen' } },
     { path: '/', name: 'tasklist', component: () => import('@/features/task/Tasklist.vue') },
     { path: '/survey/inquiry', name: 'inquiry', component: () => import('@/features/survey/Inquiry.vue') },
-    { path: '/survey/form', name: 'form', component: () => import('@/features/survey/SurveyForm.vue') }
+    { path: '/survey/form', name: 'form', component: () => import('@/features/survey/SurveyForm.vue') },
+    { path: '/surveyor-mapper', name: 'surveyor-mapper', component: () => import('@/features/surveyorMapper/SurveyMapper.vue'), meta: { layout: 'fullscreen' } },
   ]
 })
 

@@ -17,10 +17,13 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/appraisal-api': {
-        target: 'http://localhost:3000', // wherever the backend runs locally in dev
+      // Same path as production (src/services/api.js BASE_URL) — forwarded
+      // as-is, no rewrite, so what works in dev is exactly what ships.
+      '/appraisal-backend': {
+        // target: 'https://localhost:8886',
+        target: 'https://192.168.181.206:8886', // wherever the backend runs in dev
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/appraisal-api/, '')
+        secure: false // dev cert (mkcert/self-signed) isn't trusted by Node
       }
     }
   },
@@ -34,6 +37,8 @@ export default defineConfig({
       workbox: {
         // 🛠️ CRUCIAL FIX: Added html and xml assets to allow the app shell shell to render offline
         globPatterns: ['**/*.{js,css,html,xml,ico,png,svg}'],
+        // Tomcat never serves WEB-INF/ (403/404) — precaching it would fail the SW install.
+        globIgnores: ['**/WEB-INF/**'],
         runtimeCaching: [
           {
             // 🛠️ CRUCIAL FIX: Corrected and escaped the regex matching signature 

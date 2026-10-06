@@ -71,3 +71,88 @@ export function mapLoginResponseToSession(rawLoginResponse) {
         userId: data.userId ?? null
     }
 }
+// ============================================================================
+// 4. SURVEYOR TASK LIST RESPONSE CONVERTER
+// ============================================================================
+/**
+ * Maps POST /app-surveyor/find's ApiResponseTemplate<PaginatedListResponse<DataCommonTableDto>>
+ * into plain task objects. Confirmed against a real response — field names are
+ * the backend's Indonesian DTO keys; nothing past this function should see them.
+ * Every value is a plain string/number/null, so the result is structured-clone
+ * safe for IndexedDB as-is.
+ * @param {Object} rawResponse - Parsed JSON body from POST /app-surveyor/find.
+ * @returns {{tasks: Array, pageCount: number, totalRowCount: number}}
+ */
+export function mapTaskListResponse(rawResponse) {
+    if (!rawResponse || rawResponse.status !== true) {
+        throw new Error(rawResponse?.message || 'Task list request was not successful')
+    }
+
+    const data = rawResponse.object || {}
+    const tasks = (Array.isArray(data.dataList) ? data.dataList : []).map(row => ({
+        id: row.id,
+        orderNo: row.noOrder ?? '',
+        reportNo: row.noLaporan ?? '',
+        debtorName: row.namaDebitur ?? '',
+        assetType: row.jenisAktiva ?? '',
+        assetCategory: row.kategoriAktiva ?? '',
+        appraisalType: row.jenisAppraisal ?? '',
+        appraisalCategory: row.kategoriAppraisal ?? '',
+        reportType: row.jenisLaporan ?? '',
+        location: row.lokasi ?? '',
+        village: row.kelurahan ?? '',
+        district: row.kecamatan ?? '',
+        city: row.kota ?? '',
+        province: row.propinsi ?? '',
+        businessBranch: row.cabangBisnis ?? '',
+        appraisalBranch: row.cabangAppraisal ?? '',
+        marketingName: row.namaMarketing ?? '',
+        phone: row.noHp ?? '',
+        position: row.posisi ?? '',
+        lastMessage: row.pesanTerakhir ?? '',
+        assignedUserId: row.userId ?? null
+    }))
+
+    return {
+        tasks,
+        pageCount: data.pagingInfo?.pageCount ?? 1,
+        totalRowCount: data.totalRowCount ?? tasks.length
+    }
+}
+
+// ============================================================================
+// 5. SURVEYOR MAPPER (surveyor ↔ postal code) CONVERTERS
+// ============================================================================
+/**
+ * NOT confirmed — no such endpoint exists in appraisal-backend yet. Assumes the
+ * same ApiResponseTemplate wrapper, a PaginatedListResponse-style dataList, and
+ * Person-model keys (userId, name, email, hp) plus a guessed `kodePos` array.
+ * Only this function should change once the real response shape is known.
+ * @param {Object} rawResponse - Parsed JSON body from the surveyor list endpoint.
+ * @returns {Array<{userId: string, name: string, email: string, phone: string, postalCodes: string[]}>}
+ */
+export function mapSurveyorListResponse(rawResponse) {
+    if (!rawResponse || rawResponse.status !== true) {
+        throw new Error(rawResponse?.message || 'Surveyor list request was not successful')
+    }
+
+    const data = rawResponse.object || {}
+    const rows = Array.isArray(data.dataList) ? data.dataList : (Array.isArray(data) ? data : [])
+    return rows.map(row => ({
+        userId: row.userId ?? '',
+        name: row.name ?? '',
+        email: row.email ?? '',
+        phone: row.hp ?? row.phone ?? '',
+        postalCodes: (Array.isArray(row.kodePos) ? row.kodePos : []).map(String)
+    }))
+}
+
+/**
+ * Request body for saving a surveyor's full postal-code list. NOT confirmed.
+ * @param {string} userId
+ * @param {string[]} postalCodes
+ * @returns {{userId: string, kodePos: string[]}}
+ */
+export function mapSurveyorPostalCodesToRequest(userId, postalCodes) {
+    return { userId, kodePos: [...postalCodes] }
+}

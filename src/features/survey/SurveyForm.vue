@@ -7,18 +7,23 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, inject } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import SharedForm from '@/components/Form.vue'
 import { addRecord, getCachedDropdownOptions, saveDraft, getDraft, deleteDraft } from '@/database/db.js'
 import { transformFacilityDropdownOptions } from '@/domain/mappers.js'
 import { useAuthStore } from '@/store/auth.js'
+import { getCachedTask } from '@/services/taskService.js'
 
 const toast = inject('toast')
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 const formConfig = ref({
   title: 'LPA Internal Appraisal Processing Node',
+  // Surveyors fill sections in whatever order they meet them on-site; required
+  // fields are enforced on submit only (see Form.vue isFreeNavigation).
+  navigation: 'free',
   
   tabs: [
     { title: '1. Data Umum', fields: ['noOrder', 'nomerLPA', 'cpDitemui', 'namaDebitur', 'jenisObjekOrder', 'jenisObjekFisik', 'lokasiCabang', 'lokasiAgunanFisik', 'namaPerumahan', 'namaCluster', 'blokGangLantai', 'nomorUnit', 'rt', 'rw', 'posisiLokasi', 'kodePos', 'propinsi', 'kabupaten', 'kecamatan', 'desaKelurahan', 'statusJaminan', 'kategoriSLA', 'sla', 'tanggalOrder', 'tanggalSurvey', 'penilaianDitujukanKe', 'ditinjauOleh', 'diantarOleh', 'catatanHasilSurvey', 'mataUang', 'tanggalRate', 'nilaiRate'] },
@@ -140,9 +145,36 @@ const formConfig = ref({
   ]
 })
 
-// Single draft slot for this form; a real multi-order flow would key this per
-// order/ticket (e.g. `survey-draft-${appraisalTicket}`) once orders are dynamic.
-const DRAFT_KEY = 'survey-draft-data-umum'
+// Opened from Tasklist.vue with ?taskId=… → one draft slot per task (Tasklist
+// reads the same key for its "Draft tersimpan" badge). Without a taskId, falls
+// back to the original single shared slot.
+const taskId = route.query.taskId ?? null
+const DRAFT_KEY = taskId ? `task-${taskId}` : 'survey-draft-data-umum'
+
+// Cached task field → autoFilled form field. No task-detail endpoint exists yet,
+// so the cached /app-surveyor/find row is the only source (and works offline).
+const TASK_PREFILL = {
+  noOrder: 'orderNo',
+  namaDebitur: 'debtorName',
+  jenisObjekOrder: 'assetType',
+  propinsi: 'province',
+  kabupaten: 'city',
+  kecamatan: 'district',
+  desaKelurahan: 'village'
+}
+
+const prefillFromTask = async () => {
+  if (!taskId) return
+  const task = await getCachedTask(auth.userId, taskId)
+  if (!task) {
+    toast.error('Tugas tidak ditemukan', 'Data tugas ini belum tersimpan di perangkat. Buka Task List saat online.')
+    return
+  }
+  Object.entries(TASK_PREFILL).forEach(([fieldName, taskKey]) => {
+    const field = formConfig.value.fields.find(f => f.name === fieldName)
+    if (field) field.value = task[taskKey] ?? ''
+  })
+}
 
 // Bypasses the debounce entirely — called by the router guard right before a
 // forced redirect to /login, so an expired-token navigation can't lose whatever
@@ -163,7 +195,7 @@ const handleFormPublishPipeline = async (flattenedFormData) => {
   const transactionEnvelope = {
     timestamp: Date.now(),
     status: navigator.onLine ? 'pending' : 'pending_auth',
-    payload: flattenedFormData
+    payload: taskId ? { ...flattenedFormData, taskId } : flattenedFormData
   }
 
   await addRecord('syncQueue', transactionEnvelope)
@@ -209,6 +241,8 @@ const handleDraftChange = async (fieldsSnapshot) => {
 }
 
 onMounted(async () => {
+  await prefillFromTask()
+
   const cachedClassifications = await getCachedDropdownOptions('facilityTypesList')
   const classificationField = formConfig.value.fields.find(f => f.name === 'facilityType')
   if (classificationField && cachedClassifications) {

@@ -2,7 +2,7 @@
 // 1. DATABASE METADATA & CRYPTO CONSTANTS
 // ============================================================================
 const DB_NAME = 'SurveyorOfflineDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 // Secret corporate security passphrase seed (In production, derive this dynamically from user login session)
 const SECRET_PASSPHRASE_SEED = 'Permata-Mortgage-Secure-Salt-2026';
@@ -58,10 +58,21 @@ export function openDB() {
             if (!db.objectStoreNames.contains('session')) {
                 db.createObjectStore('session', { keyPath: 'sessionKey' });
             }
+            if (!db.objectStoreNames.contains('tasks')) {
+                db.createObjectStore('tasks', { keyPath: 'cacheKey' });
+            }
         };
 
-        request.onsuccess = (event) => resolve(event.target.result);
+        request.onsuccess = (event) => {
+            const db = event.target.result;
+            // Every openDB() call leaves its connection open. Without this, a
+            // DB_VERSION bump (new deploy in another tab, or HMR in dev) is blocked
+            // by those old connections and the upgrade waits forever.
+            db.onversionchange = () => db.close();
+            resolve(db);
+        };
         request.onerror = (event) => reject(event.target.error);
+        request.onblocked = () => console.warn(`${DB_NAME} upgrade to v${DB_VERSION} blocked by an open connection — close other tabs of this app.`);
     });
 }
 
@@ -281,6 +292,47 @@ export async function clearSession() {
         const transaction = db.transaction('session', 'readwrite');
         const store = transaction.objectStore('session');
         const request = store.delete(SESSION_KEY);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// ============================================================================
+// 8. SURVEYOR TASK LIST CACHE (offline copy of POST /app-surveyor/find)
+// ============================================================================
+// The find endpoint is a POST, which the Cache API (and so Workbox runtime
+// caching) can't store — the offline copy lives here instead. One row per
+// userId so a shared device never shows another surveyor's queue, and the whole
+// store is wiped on clearAuth(). Not encrypted, same reasoning as drafts: it's
+// re-derivable from the server and replaced on every successful refresh.
+export async function saveTaskCache(userId, tasks) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('tasks', 'readwrite');
+        const store = transaction.objectStore('tasks');
+        const request = store.put({ cacheKey: userId, tasks, fetchedAt: Date.now() });
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+export async function getTaskCache(userId) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('tasks', 'readonly');
+        const store = transaction.objectStore('tasks');
+        const request = store.get(userId);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+export async function clearTaskCache() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('tasks', 'readwrite');
+        const store = transaction.objectStore('tasks');
+        const request = store.clear();
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
     });

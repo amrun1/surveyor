@@ -1,6 +1,6 @@
 import { ref, computed, toRaw } from 'vue'
 import { defineStore } from 'pinia'
-import { saveSession, getSession, clearSession } from '@/database/db.js'
+import { saveSession, getSession, clearSession, clearTaskCache } from '@/database/db.js'
 
 // Reads the `exp` claim out of a JWT without verifying its signature — that's
 // the server's job on every request; this is purely so the client can schedule
@@ -93,6 +93,9 @@ export const useAuthStore = defineStore('auth', () => {
         userId.value = null
         activeRole.value = null
         await clearSession()
+        // Cached task rows carry debtor names/addresses — don't leave them on a
+        // shared device for whoever signs in next.
+        await clearTaskCache()
     }
 
     // Called once on app boot (see App.vue) so a reload/reopen doesn't force a
