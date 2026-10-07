@@ -120,7 +120,6 @@ const handleSubmit = async () => {
 
     const data = await response.json()
     await auth.setSession(mapLoginResponseToSession(data))
-    console.log('Login response:', auth)
 
     const resolvedCount = await resolvePendingAuthRecords()
     if (resolvedCount > 0) {

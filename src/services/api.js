@@ -1,4 +1,6 @@
 import { useAuthStore } from '@/store/auth.js'
+import { isEmbedded } from '@/embed/embedMode.js'
+import { handleAuthExpired } from '@/embed/bridge.js'
 
 const BASE_URL = '/appraisal-backend'
 
@@ -15,7 +17,9 @@ export async function apiFetch(path, { skipAuth = false, ...options } = {}) {
     const response = await fetch(`${BASE_URL}${path}`, { ...options, headers })
 
     if (hadToken && response.status === 401) {
-        await auth.clearAuth()
+        // Embedded: the session belongs to the parent app — ask it for a fresh token.
+        if (isEmbedded) handleAuthExpired()
+        else await auth.clearAuth()
     }
 
     return response

@@ -60,7 +60,7 @@ export function transformSubmissionHistoryLogs(rawLogRecordsArray) {
  * field) — auth.setSession() already falls back to decoding the JWT's own
  * exp claim when this is undefined, so that's left unset here on purpose.
  * @param {Object} rawLoginResponse - Parsed JSON body from POST /auth/login.
- * @returns {{token: string, expiresAt: undefined, roles: string[]}}
+ * @returns {{token: string, expiresAt: undefined, roles: string[], userId: string|null, menus: Array}}
  */
 export function mapLoginResponseToSession(rawLoginResponse) {
     const data = rawLoginResponse.object || {}
@@ -68,8 +68,38 @@ export function mapLoginResponseToSession(rawLoginResponse) {
         token: typeof data.token === 'string' ? data.token.replace(/^Bearer\s+/i, '') : data.token,
         expiresAt: undefined,
         roles: data.roles || [],
-        userId: data.userId ?? null
+        userId: data.userId ?? null,
+        menus: mapMenuTree(data.menus)
     }
+}
+
+/**
+ * Maps object.menus from POST /auth/login into a clean, plain-object tree.
+ * The backend currently repeats the same menu id 2–3 times at every level
+ * (looks like a JOIN fan-out on their side) — only the first occurrence of
+ * each id is kept, in original order. Plain objects only, so the result is
+ * structured-clone safe for IndexedDB.
+ * @param {Array} rawMenus - object.menus as sent by the backend.
+ * @returns {Array<{id: number, name: string, uri: string, roles: string[], children: Array}>}
+ */
+export function mapMenuTree(rawMenus) {
+    if (!Array.isArray(rawMenus)) return []
+
+    const seen = new Set()
+    const menus = []
+    for (const raw of rawMenus) {
+        if (!raw || seen.has(raw.id)) continue
+        seen.add(raw.id)
+        const uri = String(raw.uri ?? '').trim()
+        menus.push({
+            id: raw.id,
+            name: String(raw.name ?? ''),
+            uri: uri.startsWith('/') ? uri : `/${uri}`,
+            roles: Array.isArray(raw.roles) ? raw.roles.map(String) : [],
+            children: mapMenuTree(raw.children)
+        })
+    }
+    return menus
 }
 // ============================================================================
 // 4. SURVEYOR TASK LIST RESPONSE CONVERTER

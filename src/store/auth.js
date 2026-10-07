@@ -1,26 +1,13 @@
 import { ref, computed, toRaw } from 'vue'
 import { defineStore } from 'pinia'
 import { saveSession, getSession, clearSession, clearTaskCache } from '@/database/db.js'
+import { filterMenuByRole, collectLeaves, collectLeafUris } from '@/domain/menu.js'
+import { decodeJwtExpiry } from '@/domain/jwt.js'
+import { isEmbedded } from '@/embed/embedMode.js'
 
-// Reads the `exp` claim out of a JWT without verifying its signature — that's
-// the server's job on every request; this is purely so the client can schedule
-// a proactive refresh / show an expiry warning without a round-trip just to ask.
-function decodeJwtExpiry(token) {
-    try {
-        // JWT segments are base64url with padding stripped; atob wants standard,
-        // padded base64.
-        const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-        const payload = JSON.parse(atob(b64 + '='.repeat((4 - b64.length % 4) % 4)))
-        return payload.exp ? payload.exp * 1000 : null // exp is seconds; JS wants ms
-    } catch (err) {
-        console.warn('Could not decode JWT exp claim:', err)
-        return null // not a JWT, or unreadable — caller falls back
-    }
-}
-
-// Confirmed backend token lifetime (app.jwt.expiration-ms=86400000). Only used
-// when the exp claim can't be read — the server still validates every request.
-const FALLBACK_TOKEN_LIFETIME_MS = 24 * 60 * 60 * 1000
+// Backend token lifetime as observed in real tokens (exp − iat = 3600s). Only
+// used when the exp claim can't be read — the server still validates every request.
+const FALLBACK_TOKEN_LIFETIME_MS = 60 * 60 * 1000
 
 export const useAuthStore = defineStore('auth', () => {
     const token = ref(null)
@@ -30,6 +17,12 @@ export const useAuthStore = defineStore('auth', () => {
     // For accounts with more than one role, the one currently selected in the
     // Header. Always one of `roles`; defaults to roles[0].
     const activeRole = ref(null)
+    // Full menu tree from /auth/login (mapMenuTree), for every role the user has.
+    const menus = ref([])
+    // false = this session predates backend menus (never received any), as
+    // opposed to the backend genuinely sending an empty list. The router guard
+    // uses it to send such sessions back to /login once instead of locking them out.
+    const hasMenuData = ref(false)
     const isHydrated = ref(false) // true once we've checked IndexedDB for a prior session
 
     // Set by the router guard specifically for the "offline + invalid token"
@@ -53,31 +46,41 @@ export const useAuthStore = defineStore('auth', () => {
 
     const isTokenValid = computed(() => !!token.value && !!expiresAt.value && Date.now() < expiresAt.value)
 
+    // What the sidebar shows and the router guard allows, for the active role only.
+    const visibleMenus = computed(() => filterMenuByRole(menus.value, activeRole.value))
+    const allowedUris = computed(() => collectLeafUris(visibleMenus.value))
+    const firstAllowedUri = computed(() => collectLeaves(visibleMenus.value)[0]?.uri ?? null)
+
     // `expiresAt` takes precedence when the server sends one explicitly; otherwise
     // fall back to decoding the JWT itself.
     // Arrays must go through toRaw() — IndexedDB can't structured-clone a reactive Proxy.
-    const persistSession = () => saveSession({
+    // menus is a nested tree and toRaw() only unwraps the top level, so it's
+    // deep-copied to plain JSON instead.
+    // Embedded mode (embed/embedMode.js) keeps the session in memory only — the
+    // IndexedDB `session` store belongs to the standalone app.
+    const persistSession = () => isEmbedded ? Promise.resolve() : saveSession({
         token: token.value,
         expiresAt: expiresAt.value,
         roles: toRaw(roles.value),
         userId: userId.value,
-        activeRole: activeRole.value
+        activeRole: activeRole.value,
+        menus: JSON.parse(JSON.stringify(menus.value))
     })
 
-    const setSession = async ({ token: newToken, expiresAt: serverExpiresAt, roles: newRoles, userId: newUserId }) => {
+    const setSession = async ({ token: newToken, expiresAt: serverExpiresAt, roles: newRoles, userId: newUserId, menus: newMenus }) => {
         token.value = newToken
         expiresAt.value = serverExpiresAt ?? decodeJwtExpiry(newToken)
         if (newToken && !expiresAt.value) {
-            console.warn('No usable exp claim on token — assuming the backend default 24h lifetime.')
+            console.warn('No usable exp claim on token — assuming the backend default 1h lifetime.')
             expiresAt.value = Date.now() + FALLBACK_TOKEN_LIFETIME_MS
         }
         roles.value = newRoles || []
         userId.value = newUserId ?? null
         activeRole.value = roles.value[0] ?? null
+        menus.value = newMenus || []
+        hasMenuData.value = true
         needsReauthWhenOnline.value = false
-        console.log('Auth session set:', { token: token.value, expiresAt: expiresAt.value, roles: roles.value })
         await persistSession()
-        console.log('Auth session saved to IndexedDB.')
     }
 
     const setActiveRole = async (role) => {
@@ -92,6 +95,12 @@ export const useAuthStore = defineStore('auth', () => {
         roles.value = []
         userId.value = null
         activeRole.value = null
+        menus.value = []
+        hasMenuData.value = false
+        // Embedded mode must never touch the standalone app's stored session or
+        // task cache — on a same-origin parent that would log out a surveyor
+        // signed in to the standalone app in another tab.
+        if (isEmbedded) return
         await clearSession()
         // Cached task rows carry debtor names/addresses — don't leave them on a
         // shared device for whoever signs in next.
@@ -110,12 +119,17 @@ export const useAuthStore = defineStore('auth', () => {
             userId.value = session.userId ?? null
             // Sessions persisted before activeRole existed won't have one.
             activeRole.value = roles.value.includes(session.activeRole) ? session.activeRole : (roles.value[0] ?? null)
+            // Sessions persisted before menus existed won't have any — the router
+            // guard sends those back to /login once to pick them up.
+            hasMenuData.value = Array.isArray(session.menus)
+            menus.value = session.menus || []
         }
         isHydrated.value = true
     }
 
     return {
         token, expiresAt, roles, userId, activeRole, isHydrated, isTokenValid, needsReauthWhenOnline,
+        menus, hasMenuData, visibleMenus, allowedUris, firstAllowedUri,
         setSession, setActiveRole, clearAuth, hydrate,
         registerFlushHandler, unregisterFlushHandler, flushPendingSaves
     }

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useUiStore } from '@/store/ui.js'
 import { useAuthStore } from '@/store/auth.js'
 import { logout } from '@/services/authService.js'
+import { checkMenuAccess } from '@/router/index.js'
 import UserIcon from '@/icons/UserIcon.vue'
 import ChevronDownIcon from '@/icons/ChevronDownIcon.vue'
 import CheckIcon from '@/icons/CheckIcon.vue'
@@ -36,6 +37,10 @@ const toggleRoleMenu = () => {
 const selectRole = async (role) => {
     isRoleMenuOpen.value = false
     await auth.setActiveRole(role)
+    // The new role may not be allowed on the current page — nothing navigates
+    // on a role switch, so the router guard has to be asked explicitly.
+    const access = checkMenuAccess(router.currentRoute.value, auth)
+    if (access !== true) await router.replace(access)
 }
 
 const onDocumentClick = (event) => {

@@ -2,7 +2,9 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { useAuthStore } from '@/store/auth.js'
 import App from './App.vue'
-import router from './router'
+import router, { syncMenuRoutes } from './router'
+import { isEmbedded } from '@/embed/embedMode.js'
+import { startEmbedBridge } from '@/embed/bridge.js'
 import './assets/main.css'
 
 async function requestPersistentStorage() {
@@ -14,8 +16,15 @@ async function requestPersistentStorage() {
 
 const app = createApp(App)
 app.use(createPinia())
-await useAuthStore().hydrate()
+if (isEmbedded) {
+  // Session comes from the parent window over postMessage, memory-only —
+  // the stored standalone session is deliberately never read.
+  startEmbedBridge()
+} else {
+  await useAuthStore().hydrate()
+  syncMenuRoutes() // before the first navigation, so a deep link to a menu-only route resolves
+}
 app.use(router)
 app.mount('#app')
 
-requestPersistentStorage()
+if (!isEmbedded) requestPersistentStorage()

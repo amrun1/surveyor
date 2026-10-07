@@ -1,5 +1,7 @@
 <!-- src/features/surveyorMapper/SurveyMapper.vue -->
 <template>
+    <!-- Embedded in the parent app's iframe; EmbedGate shows the page once the parent's session arrives. -->
+    <EmbedGate>
     <!-- Fullscreen layout sits inside App's h-screen overflow-hidden shell, so this page scrolls itself. -->
     <div class="h-full overflow-y-auto bg-background">
         <div class="max-w-5xl mx-auto p-4 md:p-6 space-y-4">
@@ -162,10 +164,13 @@
             </div>
         </Transition>
     </div>
+    </EmbedGate>
 </template>
 
 <script setup>
-import { ref, computed, watch, inject, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, inject, nextTick } from 'vue'
+import EmbedGate from '@/components/EmbedGate.vue'
+import { bridgeState } from '@/embed/bridge.js'
 import GlobalTable from '@/components/Table.vue'
 import Pagination from '@/components/Pagination.vue'
 import { useSync } from '@/composables/useSync.js'
@@ -315,5 +320,9 @@ const save = async () => {
     }
 }
 
-onMounted(load)
+// The token comes from the parent window after mount, not from a stored session —
+// load once it's there. A refreshed token later doesn't re-fetch (the list is already on screen).
+watch(() => bridgeState.value === 'ready', (ready) => {
+    if (ready && surveyors.value.length === 0) load()
+}, { immediate: true })
 </script>

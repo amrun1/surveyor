@@ -10,6 +10,7 @@ import AppToast from '@/components/Toast.vue'
 
 import { runInitialServerSync } from '@/services/bootstrap.js'
 import { useSync } from '@/composables/useSync.js'
+import { isEmbedded } from '@/embed/embedMode.js'
 
 const { flushPendingSyncQueue, setupSyncListeners, cleanupSyncListeners } = useSync()
 
@@ -20,6 +21,9 @@ const route = useRoute()
 const globalToastComponentRef = ref(null)
 
 onMounted(() => {
+  // Embedded (iframe) mode carries the parent app's user — the surveyor's
+  // offline sync queue must never be flushed under that identity.
+  if (isEmbedded) return
   runInitialServerSync()
   setupSyncListeners()
   flushPendingSyncQueue()
@@ -40,7 +44,7 @@ provide('toast', {
 // of silent. The moment connectivity actually returns (not just a flag flip,
 // the real browser event), send them to sign in properly.
 window.addEventListener('online', () => {
-  if (auth.needsReauthWhenOnline && !auth.isTokenValid) {
+  if (!isEmbedded && auth.needsReauthWhenOnline && !auth.isTokenValid) {
     router.push({ name: 'login', query: { redirect: route.fullPath } })
   }
 })
@@ -55,7 +59,7 @@ window.addEventListener('online', () => {
     '--color-background': APP_COLORS.background
   }" class="h-screen overflow-hidden flex flex-col antialiased">
 
-    <template v-if="route.meta.layout === 'fullscreen'">
+    <template v-if="route.meta.layout === 'fullscreen' || isEmbedded">
       <RouterView />
     </template>
 

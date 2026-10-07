@@ -1,4 +1,3 @@
-<!-- src/features/error/NotFound.vue -->
 <template>
     <div class="h-full overflow-y-auto bg-background flex items-center justify-center p-4">
         <div class="w-full max-w-sm bg-white p-8 rounded-2xl border border-slate-200 shadow-xs text-center space-y-3">
