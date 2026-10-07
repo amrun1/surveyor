@@ -4,6 +4,12 @@ import { useRouter } from 'vue-router'
 import { useUiStore } from '@/store/ui.js'
 import { useAuthStore } from '@/store/auth.js'
 import { logout } from '@/services/authService.js'
+import UserIcon from '@/icons/UserIcon.vue'
+import ChevronDownIcon from '@/icons/ChevronDownIcon.vue'
+import CheckIcon from '@/icons/CheckIcon.vue'
+import LogoutIcon from '@/icons/LogoutIcon.vue'
+import MenuIcon from '@/icons/MenuIcon.vue'
+import XMarkIcon from '@/icons/XMarkIcon.vue'
 
 const ui = useUiStore()
 const auth = useAuthStore()
@@ -82,10 +88,7 @@ const handleLogout = async () => {
                     <button type="button" @click="toggleRoleMenu" :disabled="!canSwitchRole"
                         :aria-label="canSwitchRole ? 'Switch role' : 'User profile'"
                         class="w-9 h-9 shrink-0 rounded-full bg-white/15 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/50 disabled:cursor-default">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
-                        </svg>
+                        <UserIcon class="w-5 h-5" />
                     </button>
                     <div class="hidden sm:flex flex-col items-start leading-tight min-w-0">
                         <span class="text-sm font-semibold truncate max-w-40">{{ auth.userId || '-' }}</span>
@@ -93,11 +96,7 @@ const handleLogout = async () => {
                             :aria-expanded="isRoleMenuOpen" aria-haspopup="listbox"
                             class="flex items-center gap-1 text-xs text-white/80 hover:text-white focus:outline-none focus:underline transition-colors">
                             {{ formatRole(auth.activeRole) }}
-                            <svg class="w-3 h-3 transition-transform" :class="{ 'rotate-180': isRoleMenuOpen }"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2" />
-                            </svg>
+                            <ChevronDownIcon class="w-3 h-3 transition-transform" :class="{ 'rotate-180': isRoleMenuOpen }" />
                         </button>
                         <span v-else class="text-xs text-white/80">{{ formatRole(auth.activeRole) }}</span>
                     </div>
@@ -116,11 +115,7 @@ const handleLogout = async () => {
                             class="w-full flex items-center justify-between px-4 py-2 text-sm text-left hover:bg-slate-100 transition-colors"
                             :class="{ 'font-semibold text-primary': role === auth.activeRole }">
                             {{ formatRole(role) }}
-                            <svg v-if="role === auth.activeRole" class="w-4 h-4" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2" />
-                            </svg>
+                            <CheckIcon v-if="role === auth.activeRole" class="w-4 h-4" />
                         </button>
                     </li>
                 </ul>
@@ -129,22 +124,15 @@ const handleLogout = async () => {
             <!-- Logout -->
             <button type="button" @click="handleLogout" :disabled="isLoggingOut" aria-label="Logout"
                 class="flex items-center gap-2 p-2 md:px-3 rounded-lg text-white hover:bg-blue-900/60 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-60 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                        stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
-                </svg>
+                <LogoutIcon class="w-5 h-5" />
                 <span class="hidden md:inline text-sm font-medium">Logout</span>
             </button>
 
             <button @click="ui.toggleMenu"
                 class="md:hidden p-2 rounded-lg text-white hover:bg-blue-900/60 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors"
                 type="button">
-                <svg v-if="!ui.isMenuOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
-                </svg>
-                <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
-                </svg>
+                <MenuIcon v-if="!ui.isMenuOpen" class="w-6 h-6" />
+                <XMarkIcon v-else class="w-6 h-6" />
             </button>
         </div>
     </header>

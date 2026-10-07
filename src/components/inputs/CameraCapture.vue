@@ -23,11 +23,8 @@
                 <img :src="modelValue" alt="Property asset record" class="w-full h-full object-cover" />
                 <div
                     class="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 flex items-center justify-center transition-all">
-                    <svg class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-all duration-150"
-                        fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.604 10.604ZM10.5 7.5v6m3-3h-6" />
-                    </svg>
+                    <ZoomInIcon class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-all duration-150"
+                        stroke-width="2.5" />
                 </div>
             </div>
             <div v-if="!isStreamActive && !modelValue" class="text-center p-6 text-slate-400 space-y-2">
@@ -69,6 +66,7 @@
 
 <script setup>
 import { ref, onUnmounted } from 'vue'
+import ZoomInIcon from '@/icons/ZoomInIcon.vue'
 defineProps({ label: String, required: Boolean, error: String })
 const modelValue = defineModel({ type: String, default: '' })
 const videoRef = ref(null), hiddenCanvasRef = ref(null), fileInputRef = ref(null), isStreamActive = ref(false), isPreviewOpen = ref(false)

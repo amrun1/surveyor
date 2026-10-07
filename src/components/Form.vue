@@ -23,9 +23,7 @@
             ]"
             class="px-4 py-2 text-xs rounded-xl transition-all duration-150 whitespace-nowrap focus:outline-none flex items-center gap-1.5"
           >
-            <svg v-if="!isTabReachable(idx)" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
+            <LockIcon v-if="!isTabReachable(idx)" width="11" height="11" stroke-width="2.5" />
             {{ tab.title }}
             <span v-if="isFreeNavigation && !isTabComplete(idx)" class="w-1.5 h-1.5 rounded-full bg-amber-500"
               title="Ada field wajib yang belum diisi" aria-label="ada field wajib kosong"></span>
@@ -88,12 +86,8 @@
                     class="text-[11px] font-semibold normal-case tracking-normal">
                     {{ sectionFieldCounts[field.section] }} fields
                   </span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-                    class="transition-transform duration-200"
-                    :class="{ '-rotate-90': isSectionCollapsed(field.section) }">
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
+                  <ChevronDownIcon width="14" height="14" stroke-width="2.5" class="transition-transform duration-200"
+                    :class="{ '-rotate-90': isSectionCollapsed(field.section) }" />
                 </span>
               </button>
               <h3 v-else class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">{{ field.section }}
@@ -173,6 +167,8 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, inject } from 'vue'
+import LockIcon from '@/icons/LockIcon.vue'
+import ChevronDownIcon from '@/icons/ChevronDownIcon.vue'
 import TextInput from '@/components/inputs/TextInput.vue'
 import TextArea from '@/components/inputs/TextArea.vue'
 import MapDisplay from '@/components/inputs/MapDisplay.vue'

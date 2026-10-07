@@ -10,12 +10,8 @@
             </div>
             <span v-else class="text-sm font-medium text-slate-500">From order</span>
 
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round"
-                class="shrink-0 text-slate-400 transition-transform duration-200"
-                :class="{ 'rotate-180': isOpen }">
-                <path d="M6 9l6 6 6-6" />
-            </svg>
+            <ChevronDownIcon width="15" height="15" class="shrink-0 text-slate-400 transition-transform duration-200"
+                :class="{ 'rotate-180': isOpen }" />
         </button>
 
         <div v-show="isOpen" class="px-3.5 py-1 divide-y divide-slate-100">
@@ -42,6 +38,7 @@
 //
 // Fields with autoFilled but no `pinned` only show once the card is expanded.
 import { ref, computed } from 'vue'
+import ChevronDownIcon from '@/icons/ChevronDownIcon.vue'
 
 const props = defineProps({
     fields: { type: Array, default: () => [] }, // pass formConfig.fields directly

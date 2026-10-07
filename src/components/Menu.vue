@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { useUiStore } from '@/store/ui.js'
 import SurveyIcon from '@/icons/SurveyIcon.vue'
 import CheckIcon from '@/icons/CheckIcon.vue'
+import ChevronLeftIcon from '@/icons/ChevronLeftIcon.vue'
 
 const ui = useUiStore()
 
@@ -65,7 +66,7 @@ onUnmounted(() => {
                 @click="ui.closeMenu" :class="isCompact ? 'flex-col gap-1 px-1 text-center' : 'gap-3.5 px-4'"
                 class="group flex items-center py-3 rounded-xl text-slate-700 hover:bg-slate-50 transition-all duration-200"
                 active-class="bg-blue-50/70 text-primary font-semibold">
-                <component :is="item.icon" />
+                <component :is="item.icon" class="w-5 h-5 shrink-0" />
                 <span :class="isCompact ? 'text-[11px] leading-tight' : 'text-[15px] font-medium'">{{ item.name
                     }}</span>
             </RouterLink>
@@ -75,10 +76,7 @@ onUnmounted(() => {
         <button @click="toggleCollapsed" type="button"
             :aria-label="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
             class="hidden md:flex items-center justify-center mx-3 mb-3 w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors shrink-0 self-start">
-            <svg :class="{ 'rotate-180': isCollapsed }" class="w-4 h-4 transition-transform duration-200" fill="none"
-                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
+            <ChevronLeftIcon :class="{ 'rotate-180': isCollapsed }" class="w-4 h-4 transition-transform duration-200" />
         </button>
     </aside>
 </template>

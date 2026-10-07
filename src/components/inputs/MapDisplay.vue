@@ -28,10 +28,7 @@
                 class="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 flex items-center justify-center transition-all duration-200 z-20 pointer-events-none">
                 <span
                     class="opacity-0 group-hover:opacity-100 bg-slate-900/80 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-md transition-all duration-200 flex items-center gap-1.5 pointer-events-auto">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                    </svg>
+                    <ExternalLinkIcon class="w-3.5 h-3.5" stroke-width="2.5" />
                     Open in Device Maps
                 </span>
             </div>
@@ -43,6 +40,7 @@
 import { onMounted, computed, nextTick } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css' // Crucial: Imports standard map layer dimensions shapes
+import ExternalLinkIcon from '@/icons/ExternalLinkIcon.vue'
 
 const props = defineProps({
     label: { type: String, default: '' },

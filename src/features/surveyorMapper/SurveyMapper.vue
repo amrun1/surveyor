@@ -24,11 +24,7 @@
                         <button type="button" @click="load" :disabled="isLoading || !isOnline"
                             class="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
                             aria-label="Muat ulang">
-                            <svg :class="{ 'animate-spin': isLoading }" class="w-4 h-4" fill="none" stroke="currentColor"
-                                stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
+                            <RefreshIcon :class="{ 'animate-spin': isLoading }" class="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -143,9 +139,7 @@
                                 <span class="font-mono text-sm text-slate-800">{{ code }}</span>
                                 <button type="button" @click="removeCode(code)" :aria-label="`Hapus ${code}`"
                                     class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
+                                    <XMarkIcon class="w-4 h-4" />
                                 </button>
                             </li>
                         </ul>
@@ -176,6 +170,8 @@ import GlobalTable from '@/components/Table.vue'
 import Pagination from '@/components/Pagination.vue'
 import { useSync } from '@/composables/useSync.js'
 import { fetchSurveyors, saveSurveyorPostalCodes } from '@/services/surveyorMapperService.js'
+import RefreshIcon from '@/icons/RefreshIcon.vue'
+import XMarkIcon from '@/icons/XMarkIcon.vue'
 
 const toast = inject('toast')
 const { isOnline } = useSync()

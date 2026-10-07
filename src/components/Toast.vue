@@ -13,23 +13,13 @@
             <div :class="iconStyles[type]"
                 class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-2xs">
                 <!-- Success Icon Check -->
-                <svg v-if="type === 'success'" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5"
-                    viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
+                <CheckIcon v-if="type === 'success'" class="w-5 h-5" stroke-width="2.5" />
 
                 <!-- Offline Warning Buffering Save Icon -->
-                <svg v-else-if="type === 'offline'" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"
-                    viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                </svg>
+                <LockIcon v-else-if="type === 'offline'" class="w-5 h-5" />
 
                 <!-- General Failure Alert Icon -->
-                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                </svg>
+                <AlertCircleIcon v-else class="w-5 h-5" stroke-width="2.5" />
             </div>
 
             <!-- TEXT DESCRIPTION CONTAINER LAYER -->
@@ -41,9 +31,7 @@
             <!-- DISMISS BUTTON LINK SWITCH -->
             <button type="button" @click="dismissToastNotification"
                 class="text-slate-400 hover:text-slate-600 rounded-lg p-1 hover:bg-slate-100 transition-colors cursor-pointer focus:outline-none">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
+                <XMarkIcon class="w-4 h-4" />
             </button>
 
         </div>
@@ -52,6 +40,10 @@
 
 <script setup>
 import { ref } from 'vue'
+import CheckIcon from '@/icons/CheckIcon.vue'
+import LockIcon from '@/icons/LockIcon.vue'
+import AlertCircleIcon from '@/icons/AlertCircleIcon.vue'
+import XMarkIcon from '@/icons/XMarkIcon.vue'
 
 const isVisible = ref(false)
 const title = ref('')

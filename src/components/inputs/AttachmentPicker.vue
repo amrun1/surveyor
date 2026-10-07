@@ -14,19 +14,12 @@
             </div>
             <div v-else
                 class="w-11 h-11 rounded-lg border-2 border-dashed border-slate-300 shrink-0 flex items-center justify-center text-slate-400">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                    <circle cx="12" cy="13" r="4" />
-                </svg>
+                <CameraIcon width="18" height="18" />
             </div>
             <span class="flex-1 text-sm" :class="modelValue ? 'text-slate-900 font-medium' : 'text-slate-400'">
                 {{ modelValue ? (isImageValue ? 'Lampiran terpasang — ketuk untuk ganti' : (fileName || 'Dokumen terpasang')) : 'Tambah lampiran' }}
             </span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 18l6-6-6-6" />
-            </svg>
+            <ChevronRightIcon width="16" height="16" class="text-slate-400" />
         </button>
 
         <span v-if="error" class="text-xs text-red-500 font-semibold mt-1 block">{{ error }}</span>
@@ -62,11 +55,7 @@
                     <button type="button" @click="chooseSource('camera')"
                         class="flex-1 flex flex-col items-center gap-2 py-4 px-2 rounded-2xl border border-slate-200 bg-white active:bg-slate-50 cursor-pointer">
                         <span class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                                <circle cx="12" cy="13" r="4" />
-                            </svg>
+                            <CameraIcon width="20" height="20" class="text-blue-600" />
                         </span>
                         <span class="text-xs font-semibold text-slate-700">Kamera</span>
                     </button>
@@ -74,12 +63,7 @@
                     <button type="button" @click="chooseSource('gallery')"
                         class="flex-1 flex flex-col items-center gap-2 py-4 px-2 rounded-2xl border border-slate-200 bg-white active:bg-slate-50 cursor-pointer">
                         <span class="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="18" height="18" rx="2" />
-                                <circle cx="8.5" cy="8.5" r="1.5" />
-                                <path d="M21 15l-5-5L5 21" />
-                            </svg>
+                            <ImageIcon width="20" height="20" class="text-green-600" />
                         </span>
                         <span class="text-xs font-semibold text-slate-700">Galeri</span>
                     </button>
@@ -87,11 +71,7 @@
                     <button type="button" @click="chooseSource('document')"
                         class="flex-1 flex flex-col items-center gap-2 py-4 px-2 rounded-2xl border border-slate-200 bg-white active:bg-slate-50 cursor-pointer">
                         <span class="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b45309"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <path d="M14 2v6h6" />
-                            </svg>
+                            <DocumentIcon width="20" height="20" class="text-amber-700" />
                         </span>
                         <span class="text-xs font-semibold text-slate-700">Dokumen</span>
                     </button>
@@ -110,6 +90,10 @@
 
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
+import CameraIcon from '@/icons/CameraIcon.vue'
+import ChevronRightIcon from '@/icons/ChevronRightIcon.vue'
+import ImageIcon from '@/icons/ImageIcon.vue'
+import DocumentIcon from '@/icons/DocumentIcon.vue'
 
 defineProps({
     label: { type: String, default: '' },

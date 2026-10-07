@@ -6,9 +6,7 @@
         <div class="flex items-center gap-1">
             <button type="button" :disabled="page <= 1" @click="go(page - 1)" aria-label="Sebelumnya"
                 class="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-40">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
+                <ChevronLeftIcon class="w-4 h-4" />
             </button>
             <template v-for="(item, idx) in pageItems" :key="idx">
                 <span v-if="item === '…'" class="w-9 h-9 flex items-center justify-center text-sm text-slate-400">…</span>
@@ -20,9 +18,7 @@
             </template>
             <button type="button" :disabled="page >= pageCount" @click="go(page + 1)" aria-label="Berikutnya"
                 class="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-white disabled:opacity-40">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
+                <ChevronRightIcon class="w-4 h-4" />
             </button>
         </div>
     </nav>
@@ -30,6 +26,8 @@
 
 <script setup>
 import { computed } from 'vue'
+import ChevronLeftIcon from '@/icons/ChevronLeftIcon.vue'
+import ChevronRightIcon from '@/icons/ChevronRightIcon.vue'
 
 const props = defineProps({
     page: { type: Number, required: true },

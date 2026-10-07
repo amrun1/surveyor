@@ -17,7 +17,8 @@
             <span :class="selectedLabel ? 'text-slate-900 font-medium' : 'text-slate-400'">
                 {{ selectedLabel || placeholder || 'Select an option' }}
             </span>
-            <ChevronIcon :class="{ 'rotate-180': isOpen }" />
+            <ChevronDownIcon :class="{ 'rotate-180': isOpen }"
+                class="w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0" />
         </button>
 
         <!-- ============================================================================
@@ -42,7 +43,7 @@
                             :class="inputValue === opt.value ? 'bg-blue-50/70 text-primary font-semibold' : 'text-slate-700 hover:bg-slate-50'"
                             class="w-full text-left px-4 py-3 text-sm transition-colors duration-100 flex items-center justify-between cursor-pointer">
                             <span>{{ opt.label }}</span>
-                            <CheckIcon v-if="inputValue === opt.value" />
+                            <CheckIcon v-if="inputValue === opt.value" class="w-4 h-4 text-primary shrink-0" stroke-width="2.5" />
                         </button>
                     </template>
                 </div>
@@ -91,7 +92,7 @@
                                 :class="inputValue === opt.value ? 'bg-blue-50/70 text-primary font-bold' : 'text-slate-700 active:bg-slate-50/60'"
                                 class="w-full text-left px-5 py-4 text-[15px] transition-colors duration-100 flex items-center justify-between cursor-pointer rounded-xl">
                                 <span>{{ opt.label }}</span>
-                                <CheckIcon v-if="inputValue === opt.value" />
+                                <CheckIcon v-if="inputValue === opt.value" class="w-4 h-4 text-primary shrink-0" stroke-width="2.5" />
                             </button>
                         </template>
                     </div>
@@ -108,7 +109,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import ChevronIcon from '@/icons/ChevronIcon.vue'
+import ChevronDownIcon from '@/icons/ChevronDownIcon.vue'
 import CheckIcon from '@/icons/CheckIcon.vue'
 
 const props = defineProps({

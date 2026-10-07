@@ -9,11 +9,17 @@ const router = createRouter({
     { path: '/survey/inquiry', name: 'inquiry', component: () => import('@/features/survey/Inquiry.vue') },
     { path: '/survey/form', name: 'form', component: () => import('@/features/survey/SurveyForm.vue') },
     { path: '/surveyor-mapper', name: 'surveyor-mapper', component: () => import('@/features/surveyorMapper/SurveyMapper.vue'), meta: { layout: 'fullscreen' } },
+    // Must stay last: anything not matched above renders the 404 page.
+    { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/features/error/NotFound.vue'), meta: { layout: 'fullscreen' } },
   ]
 })
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
+
+  // Unknown URL: show the 404 directly — bouncing through /login first would
+  // only land the user on the same 404 after signing in.
+  if (to.name === 'not-found') return true
 
   // Already-authenticated user landing on /login (e.g. a stale bookmark, or
   // tapping back) — send them on rather than showing the form again.
