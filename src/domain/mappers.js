@@ -1,28 +1,48 @@
 // ============================================================================
-// 1. DROPDOWN COMPONENT ENVELOPE SEED DATA CONVERTER
+// 1. PARAMETER OPTION LISTS (LPA form selects / radios / checkboxes)
 // ============================================================================
 /**
- * Maps raw backend choice lists arrays into structured { value, label } contracts.
- * Protects layout selectors elements from server schema key modifications.
- * @param {Array} rawApiResponseData - Raw server metadata blocks.
- * @returns {Array} Type-safe frontend component selection arrays options.
+ * Raw parameter-table rows → `{ [codeGroup]: [option, …] }`, the shape
+ * forms/options.js resolves `optionsKey` against. Same rules as the hardcoded
+ * snapshot there: active rows only, ordered by `sorting`; the stored value is
+ * the row's `code` when set, otherwise its `value` text byte for byte (only the
+ * label is trimmed).
+ *
+ * PLACEHOLDER shape (no endpoint yet): `{ status, object: [rows] }`, rows
+ * `{ id, aktif, code, sorting, value, codeGroup }` (`code_group` accepted too).
+ * Throws on anything else, so a bad response is never cached.
+ * @param {Object} rawResponse
+ * @returns {Object<string, Array<string|{value: string, label: string}>>}
  */
-export function transformFacilityDropdownOptions(rawApiResponseData) {
-    if (!rawApiResponseData) return []
-
-    if (Array.isArray(rawApiResponseData) && typeof rawApiResponseData === 'string') {
-        return rawApiResponseData.map(item => ({ value: item, label: item }))
+export function mapParameterOptions(rawResponse) {
+    if (!rawResponse || rawResponse.status !== true || !Array.isArray(rawResponse.object)) {
+        throw new Error(rawResponse?.message || 'Parameter options request was not successful')
     }
 
-    if (Array.isArray(rawApiResponseData) && typeof rawApiResponseData === 'object') {
-        return rawApiResponseData.map(item => ({
-            value: String(item.id || item.value || ''),
-            label: String(item.title || item.label || '')
-        }))
+    const rowsByGroup = {}
+    for (const row of rawResponse.object) {
+        const group = row?.codeGroup ?? row?.code_group
+        const text = row?.value
+        if (!group || typeof text !== 'string' || !isActive(row.aktif)) continue
+        ;(rowsByGroup[group] ||= []).push(row)
     }
 
-    return []
+    const groups = {}
+    for (const [group, rows] of Object.entries(rowsByGroup)) {
+        groups[group] = rows
+            .sort((a, b) => (Number(a.sorting) - Number(b.sorting)) || (Number(a.id) - Number(b.id)))
+            .map(row => {
+                const code = row.code == null ? '' : String(row.code).trim()
+                const value = code || row.value
+                const label = row.value.trim()
+                return value === label ? label : { value, label }
+            })
+    }
+    return groups
 }
+
+// `aktif` may arrive as a boolean or a string/number depending on serialization.
+const isActive = (aktif) => aktif === true || aktif === 'true' || aktif === 1 || aktif === '1'
 
 // ============================================================================
 // 2. REGISTRY LOGS TRANSMISSION GRID DATA CONVERTER

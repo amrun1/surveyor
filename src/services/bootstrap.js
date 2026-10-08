@@ -1,22 +1,12 @@
-import { cacheDropdownOptions } from '@/database/db.js'
-import { transformFacilityDropdownOptions } from '@/domain/mappers.js'
-import { fetchFacilityTypes } from '@/services/syncService.js'
+import { refreshParameterOptions } from '@/services/parameterOptions.js'
 
 /**
- * Service Communication Layer: Downloads, filters, and maps raw server structures 
- * directly at the network edge to prevent corrupted objects from hitting UI templates.
+ * Lookup data refreshed once per app start (App.vue onMounted; skipped when
+ * embedded). Each refresh caches to IndexedDB itself and never throws, so a
+ * failure here just means the forms keep their last-cached / snapshot lists.
+ * Login.vue also refreshes after sign-in, since the start-up call may have run
+ * with an expired token.
  */
 export async function runInitialServerSync() {
-    try {
-        const response = await fetchFacilityTypes()
-        if (!response.ok) throw new Error()
-
-        const rawData = await response.json()
-        const sanitizedDomainOptions = transformFacilityDropdownOptions(rawData)
-
-        await cacheDropdownOptions('facilityTypesList', sanitizedDomainOptions)
-        return true
-    } catch (error) {
-        return false
-    }
+    return refreshParameterOptions()
 }

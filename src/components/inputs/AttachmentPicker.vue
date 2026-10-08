@@ -94,6 +94,8 @@ import CameraIcon from '@/icons/CameraIcon.vue'
 import ChevronRightIcon from '@/icons/ChevronRightIcon.vue'
 import ImageIcon from '@/icons/ImageIcon.vue'
 import DocumentIcon from '@/icons/DocumentIcon.vue'
+import { compressImage, blobToDataUrl } from '@/domain/image.js'
+import { useSaveBeforeCamera } from '@/composables/useSaveBeforeCamera.js'
 
 defineProps({
     label: { type: String, default: '' },
@@ -107,6 +109,7 @@ defineProps({
 // to support this field type.
 const modelValue = defineModel({ type: String, default: '' })
 
+const { saveNow } = useSaveBeforeCamera()
 const isOpen = ref(false)
 const sheetRef = ref(null)
 const cameraInputRef = ref(null)
@@ -139,20 +142,24 @@ onUnmounted(() => { document.body.style.overflow = '' })
 // file browser takes over the screen.
 const chooseSource = (source) => {
     closeSheet()
-    if (source === 'camera') cameraInputRef.value.click()
+    if (source === 'camera') {
+        saveNow() // the camera app may get this page killed in the background — save first
+        cameraInputRef.value.click()
+    }
     else if (source === 'gallery') galleryInputRef.value.click()
     else documentInputRef.value.click()
 }
 
-const handleFileSelected = (event) => {
+const handleFileSelected = async (event) => {
     const file = event.target.files?.[0]
     event.target.value = '' // reset so picking the same file again still fires @change
     if (!file) return
 
     fileName.value = file.name
-    const reader = new FileReader()
-    reader.onload = () => { modelValue.value = reader.result }
-    reader.readAsDataURL(file)
+    // Photos are compressed (~3–8 MB → ~300 KB) before being stored; PDFs pass
+    // through untouched. Still a data: URL — this field's value stays a string.
+    const { blob } = await compressImage(file)
+    modelValue.value = await blobToDataUrl(blob)
 }
 </script>
 

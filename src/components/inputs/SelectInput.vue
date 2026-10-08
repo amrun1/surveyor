@@ -22,9 +22,9 @@
         </button>
 
         <!-- ============================================================================
-      DESKTOP INTERFACE LAYER: FLOATING CARD MENU DROPDOWN (>= 1024px Large Screens)
+      DESKTOP INTERFACE LAYER: FLOATING CARD MENU DROPDOWN (md: and up, >= MD_BREAKPOINT_PX)
     ============================================================================ -->
-        <div class="hidden lg:block">
+        <div class="hidden md:block">
             <transition enter-active-class="transition duration-150 ease-out"
                 enter-from-class="transform scale-95 opacity-0 -translate-y-2"
                 enter-to-class="transform scale-100 opacity-100 translate-y-0"
@@ -51,9 +51,9 @@
         </div>
 
         <!-- ============================================================================
-      MOBILE INTERFACE LAYER: HARDWARE-ACCELERATED SLIDE BOTTOM SHEET (< 1024px)
+      MOBILE INTERFACE LAYER: HARDWARE-ACCELERATED SLIDE BOTTOM SHEET (below md:)
     ============================================================================ -->
-        <div class="block lg:hidden">
+        <div class="block md:hidden">
             <dialog ref="mobileSheetRef" :class="[
                 isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             ]" class="w-full max-w-full m-0 mt-auto bg-transparent border-none p-0 outline-none fixed inset-x-0 bottom-0 z-50 transition-all duration-300 ease-[cubic-bezier(0.32,0.94,0.6,1)]"
@@ -111,6 +111,8 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import ChevronDownIcon from '@/icons/ChevronDownIcon.vue'
 import CheckIcon from '@/icons/CheckIcon.vue'
+import { normalizeOptions } from './normalizeOptions.js'
+import { MD_BREAKPOINT_PX } from '@/constants/breakpoints.js'
 
 const props = defineProps({
     label: { type: String, default: '' },
@@ -126,17 +128,7 @@ const dropdownRef = ref(null)
 const mobileSheetRef = ref(null)
 const windowWidth = ref(window.innerWidth)
 
-const normalizedOptions = computed(() => {
-    return props.options.map(opt => {
-        if (typeof opt === 'object' && opt !== null) {
-            return {
-                value: String(opt.value !== undefined ? opt.value : opt.id || ''),
-                label: String(opt.label !== undefined ? opt.label : opt.title || opt.name || '')
-            }
-        }
-        return { value: String(opt), label: String(opt) }
-    })
-})
+const normalizedOptions = computed(() => normalizeOptions(props.options))
 
 const selectedLabel = computed(() => {
     const matchingOption = normalizedOptions.value.find(opt => opt.value === String(inputValue.value))
@@ -149,7 +141,7 @@ const selectedLabel = computed(() => {
 const syncMobileDialogState = (shouldOpen) => {
     if (!mobileSheetRef.value) return
 
-    if (shouldOpen && windowWidth.value < 1024) {
+    if (shouldOpen && windowWidth.value < MD_BREAKPOINT_PX) {
         mobileSheetRef.value.showModal()
         document.body.style.overflow = 'hidden'
     } else {
@@ -182,18 +174,18 @@ const selectOption = (option) => {
 const handleViewportResizeCheck = () => {
     windowWidth.value = window.innerWidth
 
-    // If the window scales up beyond the lg breakpoint while open, convert state parameters
-    if (windowWidth.value >= 1024 && mobileSheetRef.value?.open) {
+    // If the window scales up beyond the md breakpoint while open, convert state parameters
+    if (windowWidth.value >= MD_BREAKPOINT_PX && mobileSheetRef.value?.open) {
         document.body.style.overflow = ''
         mobileSheetRef.value.close()
-    } else if (windowWidth.value < 1024 && isOpen.value && !mobileSheetRef.value?.open) {
+    } else if (windowWidth.value < MD_BREAKPOINT_PX && isOpen.value && !mobileSheetRef.value?.open) {
         // If scaled down onto mobile landscape lines, re-mount the modal backdrop mask layer
         syncMobileDialogState(true)
     }
 }
 
 const handleOutsideClick = (event) => {
-    if (windowWidth.value >= 1024 && dropdownRef.value && !dropdownRef.value.contains(event.target)) {
+    if (windowWidth.value >= MD_BREAKPOINT_PX && dropdownRef.value && !dropdownRef.value.contains(event.target)) {
         isOpen.value = false
     }
 }

@@ -1,15 +1,15 @@
 <template>
   <div 
-    class="w-full max-w-2xl mx-auto my-0 lg:my-6 transition-all duration-200 select-none
+    class="w-full max-w-2xl mx-auto my-0 md:my-6 transition-all duration-200 select-none
            bg-white text-slate-900 p-5 min-h-screen flex flex-col justify-between pb-[84px]
-           lg:border lg:border-slate-200/80 lg:shadow-xs lg:min-h-0 lg:p-6 lg:rounded-2xl lg:pb-6"
+           md:border md:border-slate-200/80 md:shadow-xs md:min-h-0 md:p-6 md:rounded-2xl md:pb-6"
   >
     <form @submit.prevent="handleSubmit" class="flex-1 flex flex-col justify-between space-y-6">
       
       <div class="space-y-6">
         <div 
           v-if="formConfig.tabs && formConfig.tabs.length > 0" 
-          class="hidden lg:flex border-b border-slate-100 pb-2 gap-1 overflow-x-auto no-scrollbar"
+          class="hidden md:flex border-b border-slate-100 pb-2 gap-1 overflow-x-auto no-scrollbar"
         >
           <button
             v-for="(tab, idx) in formConfig.tabs"
@@ -32,7 +32,7 @@
 
         <div 
           v-if="formConfig.tabs && formConfig.tabs.length > 0" 
-          class="block lg:hidden space-y-3 pt-2 pb-4 shrink-0 bg-white"
+          class="block md:hidden space-y-3 pt-2 pb-4 shrink-0 bg-white"
         >
           <div class="flex justify-between items-center text-xs font-semibold text-slate-500">
             <span>Step {{ activeTabIdx + 1 }} of {{ formConfig.tabs.length }}</span>
@@ -117,12 +117,12 @@
 
       <div 
         class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-4 flex items-center justify-between gap-3 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]
-               lg:relative lg:bottom-auto lg:left-auto lg:right-auto lg:bg-transparent lg:border-t lg:border-slate-100 lg:p-0 lg:pt-4 lg:shadow-none lg:z-auto"
+               md:relative md:bottom-auto md:left-auto md:right-auto md:bg-transparent md:border-t md:border-slate-100 md:p-0 md:pt-4 md:shadow-none md:z-auto"
       >
         <button 
           v-if="!formConfig.tabs || formConfig.tabs.length === 0"
           type="submit" 
-          class="bg-primary text-white text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-slate-800 transition-colors shadow-xs active:scale-[0.98] w-full lg:w-auto cursor-pointer"
+          class="bg-primary text-white text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-slate-800 transition-colors shadow-xs active:scale-[0.98] w-full md:w-auto cursor-pointer"
         >
           Submit Assessment
         </button>
@@ -137,7 +137,7 @@
                 ? 'opacity-40 border-slate-200 text-slate-300 cursor-not-allowed' 
                 : 'border-slate-300 text-slate-700 hover:bg-slate-50 active:scale-98'
             ]"
-            class="flex-1 lg:flex-none border font-bold text-sm px-5 py-3 rounded-xl transition-all cursor-pointer focus:outline-none text-center justify-center items-center flex max-w-[140px] h-[48px]"
+            class="flex-1 md:flex-none border font-bold text-sm px-5 py-3 rounded-xl transition-all cursor-pointer focus:outline-none text-center justify-center items-center flex max-w-[140px] h-[48px]"
           >
             &lt; Back
           </button>
@@ -169,16 +169,12 @@
 import { ref, computed, watch, nextTick, inject } from 'vue'
 import LockIcon from '@/icons/LockIcon.vue'
 import ChevronDownIcon from '@/icons/ChevronDownIcon.vue'
-import TextInput from '@/components/inputs/TextInput.vue'
-import TextArea from '@/components/inputs/TextArea.vue'
-import MapDisplay from '@/components/inputs/MapDisplay.vue'
-import SelectInput from '@/components/inputs/SelectInput.vue'
-import CameraCapture from '@/components/inputs/CameraCapture.vue'
-import CanvasDraw from '@/components/inputs/canvasdraw/CanvasDraw.vue'
 import CollapsedInfoCard from '@/components/CollapsedInfoCard.vue'
-import ReadOnlyField from '@/components/inputs/ReadOnlyField.vue'
 import CompassInput from '@/components/inputs/CompassInput.vue'
-import AttachmentPicker from '@/components/inputs/AttachmentPicker.vue'
+import ItemList from '@/components/inputs/ItemList.vue'
+import PhotoList from '@/components/inputs/PhotoList.vue'
+import { FIELD_COMPONENTS, resolveFieldComponent as resolveWith } from '@/components/inputs/fieldComponents.js'
+import { countIncompleteItems, toPlainValue } from '@/components/inputs/itemList.js'
 
 const emit = defineEmits(['onSubmit', 'onDraftChange'])
 const props = defineProps({ formConfig: { type: Object, default: () => ({ fields: [] }) } })
@@ -186,20 +182,10 @@ const fieldErrors = ref({})
 const activeTabIdx = ref(0)
 const toast = inject('toast')
 
-const componentMaps = { 
-  text: TextInput, 
-  textarea: TextArea, 
-  canvas: CanvasDraw, 
-  map: MapDisplay, 
-  select: SelectInput, 
-  camera: CameraCapture,
-  attachment: AttachmentPicker
-}
-
-// A field's `type` says what widget it WOULD be; `computed: true` overrides that with
-// a read-only display instead, regardless of type — a computed select-type field (if
-// one ever exists) gets the same plain info card as a computed text field.
-const resolveFieldComponent = (field) => field.computed ? ReadOnlyField : componentMaps[field.type]
+// Shared with ItemList.vue (inputs/fieldComponents.js); only the top-level form
+// adds `itemList` — rows inside a list can't contain another list.
+const componentMaps = { ...FIELD_COMPONENTS, itemList: ItemList, photoList: PhotoList }
+const resolveFieldComponent = (field) => resolveWith(field, componentMaps)
 
 const isFieldInActiveTab = (field) => {
   if (!props.formConfig.tabs || props.formConfig.tabs.length === 0) return true
@@ -272,6 +258,18 @@ const toggleSection = (section) => {
 const isBlankValue = (value) =>
   !value || (Array.isArray(value) && value.length === 0) || (typeof value === 'string' && value.trim() === '')
 
+// The one place that decides whether a field blocks progress/submit: a blank
+// required field, or an item list with rows still missing required fields
+// (rows may be saved incomplete on-site, but can't be submitted that way).
+const fieldErrorMessage = (field) => {
+  if (field.required && isBlankValue(field.value)) return 'Enter a value first'
+  if (field.type === 'itemList' || field.type === 'photoList') {
+    const incomplete = countIncompleteItems(field.value, field.itemFields || [])
+    if (incomplete > 0) return `${incomplete} item belum lengkap`
+  }
+  return null
+}
+
 // formConfig.navigation:
 //   'sequential' (default) — tabs past the first incomplete one are locked and "Next"
 //                            requires the current tab's required fields.
@@ -286,8 +284,8 @@ const isTabComplete = (idx) => {
   if (!tab) return true
   return tab.fields.every(fieldName => {
     const field = props.formConfig.fields.find(f => f.name === fieldName)
-    if (!field || !field.required || !isFieldVisible(field)) return true
-    return !isBlankValue(field.value)
+    if (!field || !isFieldVisible(field)) return true
+    return !fieldErrorMessage(field)
   })
 }
 
@@ -345,9 +343,13 @@ const scrollToFirstError = async () => {
 // "Save draft" tap. Form.vue stays storage-agnostic — it just emits a snapshot; the
 // parent (SurveyForm.vue) decides where/how to persist it (IndexedDB via db.js).
 let autosaveTimer = null
+// Array/object values (checkboxes, item lists) are reactive Proxies here —
+// IndexedDB's structured clone throws DataCloneError on a Proxy, and an item
+// list's rows are objects inside the array, so a deep plain copy is needed.
+const snapshotValue = toPlainValue
 const emitDraftChange = (immediate = false) => {
   clearTimeout(autosaveTimer)
-  const fire = () => emit('onDraftChange', props.formConfig.fields.map(f => ({ name: f.name, value: f.value })))
+  const fire = () => emit('onDraftChange', props.formConfig.fields.map(f => ({ name: f.name, value: snapshotValue(f.value) })))
   if (immediate) fire()
   else autosaveTimer = setTimeout(fire, 600)
 }
@@ -355,8 +357,9 @@ const emitDraftChange = (immediate = false) => {
 // Note: no `{ deep: true }` here on purpose. The getter already reads each field's
 // `.value` individually while mapping, so Vue tracks every one of those as a direct
 // dependency — deep traversal would only matter if a field's value were itself a
-// nested object/array, and every input type in this app (text, select, canvas, map,
-// camera) stores a plain string. Deep would just walk primitives for no benefit.
+// nested object/array, and almost every input type stores a plain string. The one
+// exception, `checkboxes`, always REPLACES its array on change (toggleSelection),
+// so a shallow watch still sees it. Deep would just walk primitives for no benefit.
 // Once a submit has failed, errors are kept for the whole form (not just the active
 // tab) so they're still visible when the surveyor navigates to another tab, and each
 // one clears live as it's filled in.
@@ -379,8 +382,9 @@ const validateActiveTabFieldsOnly = () => {
     const field = props.formConfig.fields.find(f => f.name === fieldName)
     if (!field || !isFieldVisible(field)) continue
 
-    if (field.required && isBlankValue(field.value)) {
-      fieldErrors.value[field.name] = 'Enter a value first'
+    const message = fieldErrorMessage(field)
+    if (message) {
+      fieldErrors.value[field.name] = message
       isCurrentStepValid = false
     }
   }
@@ -421,10 +425,11 @@ const collectRequiredErrors = () => {
   let firstErrorTabIdx = null
 
   for (const field of props.formConfig.fields) {
-    if (!field.name || !field.required || !isFieldVisible(field)) continue
-    if (!isBlankValue(field.value)) continue
+    if (!field.name || !isFieldVisible(field)) continue
+    const message = fieldErrorMessage(field)
+    if (!message) continue
 
-    errors[field.name] = 'Enter a value first'
+    errors[field.name] = message
     if (firstErrorTabIdx === null && props.formConfig.tabs) {
       const idx = props.formConfig.tabs.findIndex(t => t.fields.includes(field.name))
       if (idx !== -1) firstErrorTabIdx = idx

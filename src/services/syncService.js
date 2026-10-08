@@ -42,6 +42,10 @@ export function fetchSurveyorTaskList({ pagingInfo, filters, task } = {}) {
 // backend was checked against — keep using them for now, but treat them as
 // still-guessed until confirmed or built.
 
+// Photos (PhotoList fields) are in the payload only as { photoId } references —
+// the JPEG Blobs stay in IndexedDB (db.js `photos`). TODO once an upload endpoint
+// exists: upload each referenced photo separately (retryable per photo) before or
+// alongside this call, then deletePhoto() them after the record is synced.
 export function submitSurvey(payload) {
     return apiFetch('/survey/submit', {
         method: 'POST',
@@ -49,6 +53,10 @@ export function submitSurvey(payload) {
     })
 }
 
-export function fetchFacilityTypes() {
-    return apiFetch('/lookup/facility-types', { method: 'GET' })
+// Every active row of the legacy `parameter` table (the LPA form option lists).
+// PLACEHOLDER: no such endpoint exists yet — the path and response shape are
+// guesses. When the real one lands, only this function and mapParameterOptions()
+// (domain/mappers.js) change. Called by services/parameterOptions.js.
+export function fetchParameterOptions() {
+    return apiFetch('/parameter/find-active', { method: 'GET' })
 }

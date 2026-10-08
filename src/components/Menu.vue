@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useUiStore } from '@/store/ui.js'
 import { useAuthStore } from '@/store/auth.js'
+import { MD_BREAKPOINT_PX } from '@/constants/breakpoints.js'
 import SurveyIcon from '@/icons/SurveyIcon.vue'
 import CheckIcon from '@/icons/CheckIcon.vue'
 import ChartIcon from '@/icons/ChartIcon.vue'
@@ -38,9 +39,7 @@ const isGroupActive = (group) => group.children.some(isActive)
 //   below md → overlay drawer (ui.isMenuOpen), always full labels
 //   md and up → static sidebar; compact or full is purely the user's choice
 // Tracked in JS because isCompact combines "which tier" with "did they choose
-// to collapse it". MD_BREAKPOINT_PX agrees with Tailwind's md: by convention
-// only — if md is ever customized in @theme, update this too.
-const MD_BREAKPOINT_PX = 768
+// to collapse it". MD_BREAKPOINT_PX is shared with SelectInput.vue.
 const isMdUp = ref(false)
 let mdQuery
 const updateMdUp = (e) => { isMdUp.value = e.matches }

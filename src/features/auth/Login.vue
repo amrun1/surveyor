@@ -61,6 +61,7 @@ import { useAuthStore } from '@/store/auth.js'
 import { useSync } from '@/composables/useSync.js'
 import { login } from '@/services/authService.js'
 import { mapLoginResponseToSession } from '@/domain/mappers.js'
+import { refreshParameterOptions } from '@/services/parameterOptions.js'
 import WifiOffIcon from '@/icons/WifiOffIcon.vue'
 
 const router = useRouter()
@@ -125,6 +126,9 @@ const handleSubmit = async () => {
     if (resolvedCount > 0) {
       toast?.success('Submissions Resumed', `${resolvedCount} submission(s) saved while signed out are now syncing.`)
     }
+    // Form option lists: the start-up refresh may have run without a valid token.
+    // Not awaited — it never throws, and sign-in shouldn't wait on lookup data.
+    refreshParameterOptions()
 
     console.log('Session valid before redirect:', auth.isTokenValid, auth.expiresAt)
     const redirectTo = typeof route.query.redirect === 'string' ? route.query.redirect : '/'

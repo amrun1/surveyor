@@ -2,7 +2,7 @@
 // 1. DATABASE METADATA & CRYPTO CONSTANTS
 // ============================================================================
 const DB_NAME = 'SurveyorOfflineDB';
-const DB_VERSION = 4;
+const DB_VERSION = 5; // v5: `photos` store (PhotoList Blobs)
 
 // Secret corporate security passphrase seed (In production, derive this dynamically from user login session)
 const SECRET_PASSPHRASE_SEED = 'Permata-Mortgage-Secure-Salt-2026';
@@ -60,6 +60,9 @@ export function openDB() {
             }
             if (!db.objectStoreNames.contains('tasks')) {
                 db.createObjectStore('tasks', { keyPath: 'cacheKey' });
+            }
+            if (!db.objectStoreNames.contains('photos')) {
+                db.createObjectStore('photos', { keyPath: 'id' });
             }
         };
 
@@ -333,6 +336,48 @@ export async function clearTaskCache() {
         const transaction = db.transaction('tasks', 'readwrite');
         const store = transaction.objectStore('tasks');
         const request = store.clear();
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// ============================================================================
+// 9. PHOTOS (PhotoList — stored as Blobs, referenced from form values by id)
+// ============================================================================
+// Photos live here as compressed JPEG Blobs, NOT inside the form value as base64:
+// the form value only holds { photoId }, so the 600ms draft autosave stays tiny
+// no matter how many photos a form has, and no huge strings are ever copied.
+// Like drafts, these aren't encrypted (see §7 of CLAUDE.md for that trade-off).
+// A submitted survey's syncQueue record references its photos by id — they must
+// stay here until that record has been uploaded.
+
+/** @param {{ id: string, blob: Blob, width?: number, height?: number }} photo */
+export async function savePhoto(photo) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('photos', 'readwrite');
+        const request = transaction.objectStore('photos').put({ ...photo, savedAt: Date.now() });
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+/** @returns {Promise<{ id, blob, width, height, savedAt } | undefined>} */
+export async function getPhoto(id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('photos', 'readonly');
+        const request = transaction.objectStore('photos').get(id);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+export async function deletePhoto(id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction('photos', 'readwrite');
+        const request = transaction.objectStore('photos').delete(id);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
     });
